@@ -8,6 +8,7 @@ dependencies = [
     "pydantic",
     "uvicorn",
     "ortools>=9.10",
+    "google-genai>=1.0.0",
 ]
 
 [project.optional-dependencies]

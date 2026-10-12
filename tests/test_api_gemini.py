@@ -1,5 +1,6 @@
 import json
 import sys
+import tomllib
 from types import ModuleType, SimpleNamespace
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -35,6 +36,13 @@ def test_process_environment_overrides_dotenv_gemini_configuration(monkeypatch):
 
             assert config["GEMINI_API_KEY"] == "host-key"
             assert config["GEMINI_MODEL"] == "host-model"
+
+
+def test_root_runtime_dependencies_include_the_gemini_sdk():
+    pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    dependencies = tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]["dependencies"]
+
+    assert any(dependency.lower().startswith("google-genai") for dependency in dependencies)
 
 
 def test_relative_minutes_are_preserved_during_time_normalization():
