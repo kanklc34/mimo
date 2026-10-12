@@ -73,6 +73,16 @@ def validate(
                 elif isinstance(rule, TagDeadline) and rule.tag in stop.tags and visit.arrival_min > rule.within_minutes_from_start:
                     violations.append(_violation("tag_deadline", f"Tagged stop {stop.id} misses the {rule.tag!r} deadline.", stop_id=stop.id, courier_id=courier_id))
 
+        if courier is not None and previous_stop is not None:
+            return_arrival = previous_completion + scenario.travel_time_min(previous_stop, scenario.depot)
+            if return_arrival > courier.shift_end:
+                violations.append(_violation(
+                    "vardiya_asimi_donus",
+                    f"Courier {courier_id} returns to the depot at minute {return_arrival}, after shift end {courier.shift_end}.",
+                    stop_id=previous_stop.id,
+                    courier_id=courier_id,
+                ))
+
         if courier is not None and route_demand > courier.capacity:
             violations.append(_violation("capacity_exceeded", f"Route demand {route_demand} exceeds capacity {courier.capacity}.", courier_id=courier_id))
         for rule in constraint_set.constraints:

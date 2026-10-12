@@ -62,7 +62,7 @@ def mutations(scenario, valid_plan, constraints):
     last_stop = scenario.stop_by_id[last_visit.stop_id]
     shortened_shift_courier = first_courier.model_copy(update={"shift_end": last_visit.arrival_min + last_stop.service_min - 1})
     shortened_shift_scenario = scenario.model_copy(update={"couriers": [shortened_shift_courier, *scenario.couriers[1:]]})
-    add("after shift", valid_plan, shortened_shift_scenario, violation="outside_shift")
+    add("after shift", valid_plan, shortened_shift_scenario, violation=("outside_shift", "vardiya_asimi_donus"))
     actual_first_stop = scenario.stop_by_id[first_visit.stop_id]
     changed_stop = actual_first_stop.model_copy(update={"window_start": first_visit.arrival_min + 1, "window_end": first_visit.arrival_min + 1000})
     changed_scenario = scenario.model_copy(update={"stops": [changed_stop if stop.id == actual_first_stop.id else stop for stop in scenario.stops]})
@@ -99,18 +99,36 @@ def mutations(scenario, valid_plan, constraints):
     wrong_courier_plan = valid_plan.model_copy(update={"routes": {**valid_plan.routes, first_courier.id: [], "ghost": first_route}})
     add("wrong courier assignment", wrong_courier_plan, violation="unknown_courier")
     add("unknown unserved stop", valid_plan.model_copy(update={"unserved_stops": ["ghost"]}), violation="unknown_stop")
-    assert len(expected) == 20
+
+    last_visit = first_route[-1]
+    last_stop = scenario.stop_by_id[last_visit.stop_id]
+    return_min = last_visit.arrival_min + last_stop.service_min + scenario.travel_time_min(last_stop, scenario.depot)
+    return_exceeds_courier = first_courier.model_copy(update={"shift_end": return_min - 1})
+    return_exceeds_scenario = scenario.model_copy(update={"couriers": [return_exceeds_courier, *scenario.couriers[1:]]})
+    add("return exceeds shift", sc=return_exceeds_scenario, violation="vardiya_asimi_donus")
+
+    for name, shift_end in (("return within shift", return_min + 1), ("return exactly at shift end", return_min)):
+        return_courier = first_courier.model_copy(update={"shift_end": shift_end})
+        return_scenario = scenario.model_copy(update={"couriers": [return_courier, *scenario.couriers[1:]]})
+        add(name, sc=return_scenario, violation=None)
+
+    assert len(expected) == 23
     return expected
 
 
-@pytest.mark.parametrize("index", range(20))
+@pytest.mark.parametrize("index", range(23))
 def test_mutations_are_detected_without_false_alarms(index, mutations):
     mutation = mutations[index]
     found = validate(mutation.plan, mutation.scenario, mutation.constraints)
     found_types = codes(found)
-    assert mutation.expected_type in found_types, mutation.name
-    unexpected = [kind for kind in found_types if kind != mutation.expected_type]
-    print(f"Mutation results: {index + 1}/20 exercised; {len(unexpected)} unexpected violation(s) for {mutation.name}")
+    if mutation.expected_type is None:
+        assert found_types == [], mutation.name
+        unexpected = found_types
+    else:
+        expected_types = {mutation.expected_type} if isinstance(mutation.expected_type, str) else set(mutation.expected_type)
+        assert expected_types.issubset(found_types), mutation.name
+        unexpected = [kind for kind in found_types if kind not in expected_types]
+    print(f"Mutation results: {index + 1}/23 exercised; {len(unexpected)} unexpected violation(s) for {mutation.name}")
 
 
 def test_mutation_report_counts_detection_and_false_alarms(mutations, scenario, constraints):
@@ -118,13 +136,18 @@ def test_mutation_report_counts_detection_and_false_alarms(mutations, scenario, 
     false_alarms = 0
     for mutation in mutations:
         found = codes(validate(mutation.plan, mutation.scenario, mutation.constraints))
-        caught += mutation.expected_type in found
-        unexpected = [code for code in found if code != mutation.expected_type]
+        if mutation.expected_type is None:
+            caught += not found
+            unexpected = found
+        else:
+            expected_types = {mutation.expected_type} if isinstance(mutation.expected_type, str) else set(mutation.expected_type)
+            caught += expected_types.issubset(found)
+            unexpected = [code for code in found if code not in expected_types]
         false_alarms += len(unexpected)
         if unexpected:
             print(f"Unexpected for {mutation.name}: {unexpected}")
-    print(f"Mutation summary: {caught}/20 caught; {false_alarms} false alarms")
-    assert caught == 20
+    print(f"Mutation summary: {caught}/23 handled; {false_alarms} false alarms")
+    assert caught == 23
     assert false_alarms == 0
 
 

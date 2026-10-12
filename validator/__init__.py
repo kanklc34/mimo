@@ -1,3 +1,4 @@
 from .core import validate
+from .report import summarize
 
-__all__ = ["validate"]
+__all__ = ["validate", "summarize"]
