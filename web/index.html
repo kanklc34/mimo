@@ -19,8 +19,8 @@
   <main class="shell">
     <div class="page-heading">
       <div>
-        <p class="eyebrow">OPERASYON MERKEZİ <span>·</span> 12 EKİM 2026</p>
-        <h1>Günlük rota planı</h1>
+        <p class="eyebrow">OPERASYON MERKEZİ <span>·</span> SENTETİK GÜN PLANI</p>
+        <h1>Kurye operasyonu</h1>
       </div>
       <div class="shift-pill"><div><small>VARDİYA</small><strong>08:00 — 16:00</strong></div></div>
     </div>
@@ -28,13 +28,13 @@
     <section class="workspace" aria-label="Rota planlama çalışma alanı">
       <article class="panel route-panel">
         <div class="panel-head route-head">
-          <div class="route-title"><h2>Günlük rota planı</h2><p>İstanbul · <span id="stop-count">50 durak · 4 kurye</span> · kuş uçuşu tahmin</p></div>
+          <div class="route-title"><h2>Gün planı</h2><p>Demo İstanbul · Sentetik duraklar · <span id="stop-count">50 durak · 4 kurye</span> · kuş uçuşu tahmin</p></div>
           <div class="avatar-wrap"><div class="mimo-avatar" id="mimo-avatar" aria-label="Mimo durumu"></div><div><strong id="mimo-caption">Mimo hazır</strong><small id="mimo-log">Talimat bekleniyor</small></div></div>
           <button class="button secondary reset-button" id="reset-plan" type="button">Başa dön</button>
         </div>
         <div class="map-toolbar"><div class="overview-map-switch" id="overview-map-switch" role="group" aria-label="Haritada gösterilen plan">
-          <button class="overview-tab active" type="button" data-overview-map="new" aria-pressed="true">Yeni plan <span id="new-distance">— km</span></button>
-          <button class="overview-tab" type="button" data-overview-map="old" aria-pressed="false">Önceki plan <span id="old-distance">— km</span></button>
+          <button class="overview-tab active" type="button" data-overview-map="new" aria-pressed="true">Güncel plan <span id="new-distance">— km</span></button>
+          <button class="overview-tab" type="button" data-overview-map="old" aria-pressed="false" hidden>Önceki plan <span id="old-distance">— km</span></button>
         </div><button class="map-open map-open-main" type="button" data-route-map="new" aria-label="Rotayı büyüt ve incele">Rotayı incele ↗</button></div>
         <div class="route-compare">
           <div class="map-card" id="old-map-card" hidden><div class="map-label"><span class="legend-dot old" aria-hidden="true"></span><span>ÖNCEKİ PLAN</span></div><svg id="old-map" viewBox="0 0 360 230" role="img" aria-label="Önceki rota haritası"></svg></div>
@@ -94,12 +94,12 @@
     <dialog class="route-detail-dialog" id="route-detail-dialog" aria-modal="true" aria-labelledby="detail-title">
       <div class="detail-shell">
         <header class="detail-header">
-          <div><p class="eyebrow">ROTA İNCELEMESİ</p><h2 id="detail-title">Yeni plan</h2><p id="detail-subtitle">Durakları seçerek atama ve varış bilgisini görün.</p></div>
+          <div><p class="eyebrow">ROTA İNCELEMESİ</p><h2 id="detail-title">Güncel plan</h2><p id="detail-subtitle">Durakları seçerek atama ve varış bilgisini görün.</p></div>
           <button class="button secondary detail-close" id="close-route-detail" type="button">Kapat <span aria-hidden="true">×</span></button>
         </header>
         <div class="detail-switch" role="group" aria-label="Gösterilen rota">
-          <button class="detail-tab" type="button" data-detail-map="old">Önceki plan</button>
-          <button class="detail-tab active" type="button" data-detail-map="new">Yeni plan</button>
+          <button class="detail-tab" type="button" data-detail-map="old" hidden>Önceki plan</button>
+          <button class="detail-tab active" type="button" data-detail-map="new">Güncel plan</button>
         </div>
         <div class="detail-body">
           <div class="detail-map-wrap"><svg id="detail-map" viewBox="0 0 360 230" role="img" aria-label="Büyütülmüş rota haritası"></svg><p class="detail-map-hint">Bir durağa tıklayarak kurye ve varış saatini inceleyin.</p><div class="detail-stop-info" id="detail-stop-info" aria-live="polite">Durak ayrıntısı için haritada bir nokta seçin.</div></div>

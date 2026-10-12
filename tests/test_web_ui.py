@@ -44,3 +44,13 @@ def test_dashboard_opens_a_guided_workflow_instead_of_showing_everything():
     assert 'id="workflow-dialog"' in html
     assert 'class="panel constraints-panel" hidden' in html
     assert 'class="dashboard-side"' in html
+
+
+def test_previous_plan_is_only_offered_after_a_replan_and_demo_data_is_labeled():
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+    script = (WEB / "app.js").read_text(encoding="utf-8")
+
+    assert "SENTETİK GÜN PLANI" in html
+    assert "Sentetik duraklar" in html
+    assert "state.hasComparison" in script
+    assert 'data-detail-map="old"' in html

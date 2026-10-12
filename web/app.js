@@ -4,7 +4,7 @@ const state = {
   scenario: null, plan: null, previous: null, constraints: { constraints: [] },
   changed: new Set(), timeOnly: new Set(), coordinates: new Map(), depotPoint: null,
   mimoPosition: null, mimoState: null, assetFailed: new Set(), tourId: 0, moveId: 0,
-  playTimer: null, detailMap: "new", detailOpener: null,
+  playTimer: null, detailMap: "new", detailOpener: null, hasComparison: false,
 };
 const courierColors = ["#4b9a70", "#729ac0", "#d59b54", "#9c7eb4"];
 const captions = {
@@ -276,6 +276,7 @@ async function runTour(data) {
 }
 
 function renderResult(data, { tour = true } = {}) {
+  state.hasComparison = Boolean(state.plan && data.diff?.has_previous);
   state.previous = state.plan || (!tour && data.diff?.previous_distance_km == null ? data.plan : null);
   state.plan = data.plan;
   state.constraints = data.constraints || { constraints: [] };
@@ -444,6 +445,7 @@ function showStopDetails(stopId) {
 }
 
 function renderRouteDetail(which = state.detailMap) {
+  if (which === "old" && !state.hasComparison) which = "new";
   state.detailMap = which;
   const source = which === "old" ? $("#old-map") : $("#new-map");
   const target = $("#detail-map");
@@ -454,10 +456,10 @@ function renderRouteDetail(which = state.detailMap) {
   const isOld = which === "old";
   const plan = isOld ? state.previous : state.plan;
   const distance = isOld ? $("#old-distance").textContent : $("#new-distance").textContent;
-  $("#detail-title").textContent = isOld ? "Önceki plan" : "Yeni plan";
+  $("#detail-title").textContent = isOld ? "Önceki plan" : "Güncel plan";
   $("#detail-subtitle").textContent = isOld
     ? "Devir öncesindeki rota dağılımı."
-    : "Güncellenen rota dağılımı. Duraklara tıklayarak ayrıntıyı görün.";
+    : "Güncel rota dağılımı. Duraklara tıklayarak ayrıntıyı görün.";
   document.querySelectorAll("[data-detail-map]").forEach(button => {
     const active = button.dataset.detailMap === which;
     button.classList.toggle("active", active);
@@ -488,8 +490,10 @@ function openRouteDetail(which, opener) {
 }
 
 function renderOverviewMap(which = "new") {
-  const old = which === "old";
+  const old = which === "old" && state.hasComparison;
   state.overviewMap = old ? "old" : "new";
+  $("[data-overview-map=\"old\"]").hidden = !state.hasComparison;
+  $("[data-detail-map=\"old\"]").hidden = !state.hasComparison;
   $("#old-map-card").hidden = !old;
   $("#new-map-card").hidden = old;
   document.querySelectorAll("[data-overview-map]").forEach(button => {
@@ -621,6 +625,7 @@ $("#reset-plan").addEventListener("click", async () => {
     $("#play-time").textContent = "Oynat";
     state.plan = baseline.plan;
     state.previous = baseline.plan;
+    state.hasComparison = false;
     state.constraints = { constraints: [] };
     state.changed.clear();
     state.timeOnly.clear();
