@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f3f5f3">
   <title>Mimo Kurye · Operasyon</title>
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles.css?v=dashboard-20261012-2">
 </head>
 <body>
   <header class="topbar">
@@ -30,15 +30,14 @@
         <div class="panel-head route-head">
           <div class="route-title"><h2>Gün planı</h2><p>Demo İstanbul · Sentetik duraklar · <span id="stop-count">50 durak · 4 kurye</span> · kuş uçuşu tahmin</p></div>
           <div class="avatar-wrap"><div class="mimo-avatar" id="mimo-avatar" aria-label="Mimo durumu"></div><div><strong id="mimo-caption">Mimo hazır</strong><small id="mimo-log">Talimat bekleniyor</small></div></div>
-          <button class="button secondary reset-button" id="reset-plan" type="button">Başa dön</button>
         </div>
         <div class="map-toolbar"><div class="overview-map-switch" id="overview-map-switch" role="group" aria-label="Haritada gösterilen plan">
           <button class="overview-tab active" type="button" data-overview-map="new" aria-pressed="true">Güncel plan <span id="new-distance">— km</span></button>
           <button class="overview-tab" type="button" data-overview-map="old" aria-pressed="false" hidden>Önceki plan <span id="old-distance">— km</span></button>
         </div><button class="map-open map-open-main" type="button" data-route-map="new" aria-label="Rotayı büyüt ve incele">Rotayı incele ↗</button></div>
         <div class="route-compare">
-          <div class="map-card" id="old-map-card" hidden><div class="map-label"><span class="legend-dot old" aria-hidden="true"></span><span>ÖNCEKİ PLAN</span></div><svg id="old-map" viewBox="0 0 360 230" role="img" aria-label="Önceki rota haritası"></svg></div>
-          <div class="map-card" id="new-map-card"><div class="map-label"><span class="legend-dot fresh" aria-hidden="true"></span><span>YENİ PLAN</span></div><svg id="new-map" viewBox="0 0 360 230" role="img" aria-label="Yeni rota haritası"></svg></div>
+          <div class="map-card" id="old-map-card" hidden><div class="map-label"><span class="legend-dot old" aria-hidden="true"></span><span>DEVİR ÖNCESİ</span></div><svg id="old-map" viewBox="0 0 360 230" role="img" aria-label="Devir öncesi rota haritası"></svg></div>
+          <div class="map-card" id="new-map-card"><div class="map-label"><span class="legend-dot fresh" aria-hidden="true"></span><span>GÜNCEL ROTA</span></div><svg id="new-map" viewBox="0 0 360 230" role="img" aria-label="Güncel rota haritası"></svg></div>
         </div>
         <div class="result-strip" id="result-strip"><span class="result-icon" aria-hidden="true"></span><span id="result-text">Plan doğrulama sonucu bekleniyor.</span></div>
         <div class="validation-evidence" id="validation-evidence" aria-live="polite" hidden></div>
@@ -51,7 +50,7 @@
           <div class="timeline-couriers" id="timeline-couriers"></div>
         </div>
         </details>
-        <div class="map-foot"><span><i class="legend-dot fresh" aria-hidden="true"></i> Aktif rota</span><span><i class="legend-dot changed" aria-hidden="true"></i> Değişen durak</span><span><i class="legend-dot muted" aria-hidden="true"></i> Depo</span></div>
+        <div class="map-foot" id="map-legend" aria-label="Harita açıklaması"></div>
       </article>
 
       <aside class="dashboard-side" aria-label="Gün özeti">
@@ -109,6 +108,6 @@
     </dialog>
     <footer><span>MIMO KURYE · ROTA OPERASYONU</span><span>Mesafeler yol ve trafik verisi içermez.</span></footer>
   </main>
-  <script src="/app.js"></script>
+  <script src="/app.js?v=dashboard-20261012-2"></script>
 </body>
 </html>

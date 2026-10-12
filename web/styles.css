@@ -145,6 +145,7 @@ h1 { margin-bottom: 0; font-size: 28px; line-height: 1.2; letter-spacing: -.035e
 .legend-dot.fresh { background: var(--courier-1); }
 .legend-dot.changed { background: var(--courier-3); }
 .legend-dot.muted { background: var(--ink); }
+.legend-dot.changed-outline { background: var(--surface); border: 2px solid var(--courier-3); }
 .workflow-panel { min-width: 0; display: grid; grid-template-rows: minmax(0, .9fr) minmax(0, 1.1fr); align-content: stretch; gap: 0; padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: 0 6px 24px #193b2710; }
 .dashboard-side { min-width: 0; }
 .dashboard-card { position: sticky; top: 16px; padding: 20px; }

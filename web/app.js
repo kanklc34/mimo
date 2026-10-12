@@ -504,6 +504,15 @@ function renderOverviewMap(which = "new") {
   $(".map-open-main").dataset.routeMap = state.overviewMap;
 }
 
+function renderMapLegend(couriers) {
+  const courierItems = couriers.map((courier, index) =>
+    `<span><i class="legend-dot" style="background:${courierColors[index % courierColors.length]}" aria-hidden="true"></i>${escapeHtml(courier.name)}</span>`
+  );
+  courierItems.push('<span><i class="legend-dot changed-outline" aria-hidden="true"></i>Yeniden atanan durak</span>');
+  courierItems.push('<span><i class="legend-dot muted" aria-hidden="true"></i>Depo</span>');
+  $("#map-legend").innerHTML = courierItems.join("");
+}
+
 function routePosition(courier, visits, minute) {
   let previousPoint = state.depotPoint;
   let previousTime = courier.shift_start;
@@ -783,6 +792,7 @@ $("#approve").addEventListener("click", async () => {
 api("/scenario").then(async scenario => {
   state.scenario = scenario;
   $("#stop-count").textContent = `${scenario.stops.length} durak · ${scenario.couriers.length} kurye`;
+  renderMapLegend(scenario.couriers);
   const baseline = await api("/plan", { constraints: { constraints: [] } });
   renderResult(baseline, { tour: false });
   state.plan = baseline.plan;

@@ -54,3 +54,13 @@ def test_previous_plan_is_only_offered_after_a_replan_and_demo_data_is_labeled()
     assert "Sentetik duraklar" in html
     assert "state.hasComparison" in script
     assert 'data-detail-map="old"' in html
+
+
+def test_map_labels_match_courier_colors_and_current_plan_state():
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+
+    assert 'id="map-legend"' in html
+    assert "YENİ PLAN" not in html
+    assert "app.js?v=" in html
+    assert html.count('id="reset-plan"') == 1
+    assert "Başa dön" not in html
