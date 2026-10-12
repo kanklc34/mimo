@@ -37,3 +37,5 @@ Tam test paketi son koşuda **61 geçti**, 3 OR-Tools SWIG deprecation uyarısı
 - Harita balonu boş metinde gizlenir; dolu metin tek satırda daha okunur boyutta gösterilir.
 - Harita Mimo işaretçisi 44 px durum PNG'si kullanır; yükleme hatasında emoji yedeğine döner.
 - Önceki rota ilk yüklemede baseline planla çizilir; eski rota çizgileri artık kurye renklerini korur.
+- Harita koordinatları iki görünümde ortak ölçek ve 6% kenar payıyla çizilir; Mimo balonu harita içinde tek satır kalır. Değişen duraklar iki haritada aynı belirgin stille, listede okunur durak adları ve kurye renk noktalarıyla gösterilir; saat kaymaları tek satırda açılır.
+- Onay kartı kısıtları 08:00 vardiya başlangıcına göre saatlendirilmiş satırlar halinde gösterir. Ham JSON varsayılan kapalıdır ve “JSON'u düzenle” ile açılır; mevcut düzeltme/onay akışı korunur.

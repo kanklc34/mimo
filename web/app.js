@@ -32,6 +32,11 @@ function formatClock(minutes) {
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }
 
+function stopLabel(id) {
+  const match = String(id || "").match(/^stop-(\d+)$/i);
+  return match ? `Durak ${match[1]}` : String(id || "");
+}
+
 function mimoAsset(status) {
   const avatar = $("#mimo-avatar");
   const fallback = status === "uyari" ? "🙈" : status === "basari" ? "🐵" : "🐒";
@@ -71,8 +76,18 @@ function svgNode(name, attributes = {}) {
 
 function pointFor(item, bounds) {
   return {
-    x: 24 + ((item.lon - bounds.minLon) / (bounds.maxLon - bounds.minLon || 1)) * 312,
-    y: 18 + (1 - (item.lat - bounds.minLat) / (bounds.maxLat - bounds.minLat || 1)) * 188,
+    x: bounds.maxLon === bounds.minLon ? 180 : ((item.lon - bounds.minLon) / (bounds.maxLon - bounds.minLon)) * 360,
+    y: bounds.maxLat === bounds.minLat ? 115 : (1 - (item.lat - bounds.minLat) / (bounds.maxLat - bounds.minLat)) * 230,
+  };
+}
+
+function mimoTarget(point) {
+  const bounds = { left: 24, right: 336, top: 24, bottom: 206 };
+  let dx = point.x > 310 ? -25 : 25;
+  let dy = point.y < 40 ? 25 : -25;
+  return {
+    x: Math.max(bounds.left + 22, Math.min(bounds.right - 22, point.x + dx)),
+    y: Math.max(bounds.top + 22, Math.min(bounds.bottom - 22, point.y + dy)),
   };
 }
 
@@ -86,6 +101,13 @@ function drawMap(svg, plan, old = false) {
     minLon: Math.min(...coords.map(item => item.lon)), maxLon: Math.max(...coords.map(item => item.lon)),
   };
   const point = item => pointFor(item, bounds);
+  const projected = coords.map(point);
+  const minX = Math.min(...projected.map(item => item.x)), maxX = Math.max(...projected.map(item => item.x));
+  const minY = Math.min(...projected.map(item => item.y)), maxY = Math.max(...projected.map(item => item.y));
+  const padX = Math.max(22, (maxX - minX) * 0.06), padY = Math.max(14, (maxY - minY) * 0.06);
+  const viewMinX = Math.min(0, minX - padX), viewMinY = Math.min(0, minY - padY);
+  const viewMaxX = Math.max(360, maxX + padX), viewMaxY = Math.max(230, maxY + padY);
+  svg.setAttribute("viewBox", `${viewMinX} ${viewMinY} ${viewMaxX - viewMinX} ${viewMaxY - viewMinY}`);
   if (!old) {
     state.coordinates = new Map(stops.map(stop => [stop.id, point(stop)]));
     state.depotPoint = point(depot);
@@ -93,21 +115,22 @@ function drawMap(svg, plan, old = false) {
   const byId = Object.fromEntries(stops.map(stop => [stop.id, stop]));
   const routes = plan?.routes || {};
   let markup = `<circle cx="${point(depot).x}" cy="${point(depot).y}" r="10" fill="#eef3ef"/>`;
-  for (const [index, [courierId, visits]] of Object.entries(routes).entries()) {
+  for (const [courierId, visits] of Object.entries(routes)) {
     const ordered = visits.map(visit => byId[visit.stop_id]).filter(Boolean);
     if (!ordered.length) continue;
     const pts = [point(depot), ...ordered.map(point), point(depot)];
-    markup += `<polyline class="route-line ${old ? "old-line" : ""}" stroke="${courierColors[index % courierColors.length]}" points="${pts.map(p => `${p.x},${p.y}`).join(" ")}"/>`;
+    const courierIndex = Math.max(0, state.scenario.couriers.findIndex(courier => courier.id === courierId));
+    markup += `<polyline class="route-line ${old ? "old-line" : ""}" stroke="${courierColors[courierIndex % courierColors.length]}" points="${pts.map(p => `${p.x},${p.y}`).join(" ")}"/>`;
   }
   const assigned = new Map();
   Object.entries(routes).forEach(([courierId, visits]) => visits.forEach(visit => assigned.set(visit.stop_id, courierId)));
   for (const stop of stops) {
     const p = point(stop), courierId = assigned.get(stop.id);
-    const routeIndex = Object.keys(routes).indexOf(courierId);
-    const fill = courierId === undefined ? "#cbd4ce" : courierColors[Math.max(0, routeIndex) % courierColors.length];
-    const changed = !old && state.changed.has(stop.id);
-    const timeOnly = !old && state.timeOnly.has(stop.id);
-    markup += `<circle class="stop-dot ${changed ? "changed-stop" : timeOnly ? "time-only-stop" : ""}" data-stop-id="${escapeHtml(stop.id)}" tabindex="0" role="button" cx="${p.x}" cy="${p.y}" r="${changed || timeOnly ? 4.1 : 2.6}" fill="${fill}"><title>${escapeHtml(stop.id)}${changed ? " · değişti" : timeOnly ? " · yalnızca saat kaydı" : ""}</title></circle>`;
+    const routeIndex = Math.max(0, state.scenario.couriers.findIndex(courier => courier.id === courierId));
+    const fill = courierId === undefined ? "#cbd4ce" : courierColors[routeIndex % courierColors.length];
+    const changed = state.changed.has(stop.id);
+    const timeOnly = state.timeOnly.has(stop.id);
+    markup += `<circle class="stop-dot ${changed ? "changed-stop" : timeOnly ? "time-only-stop" : ""}" data-stop-id="${escapeHtml(stop.id)}" tabindex="0" role="button" cx="${p.x}" cy="${p.y}" r="${changed ? 5 : timeOnly ? 4.1 : 2.6}" fill="${fill}"><title>${escapeHtml(stopLabel(stop.id))}${changed ? " · değişti" : timeOnly ? " · yalnızca saat kaydı" : ""}</title></circle>`;
   }
   const depotPoint = point(depot);
   markup += `<circle class="depot-dot" cx="${depotPoint.x}" cy="${depotPoint.y}" r="4.2"><title>Depo</title></circle>`;
@@ -116,8 +139,9 @@ function drawMap(svg, plan, old = false) {
       markup += `<g class="courier-marker" id="courier-marker-${escapeHtml(courier.id)}" transform="translate(${depotPoint.x} ${depotPoint.y})"><circle r="5.2" fill="${courierColors[index % courierColors.length]}"/><title>${escapeHtml(courier.name)}</title></g>`;
     }
     const mimoStatus = state.mimoState || "dusunuyor";
-    markup += `<g id="mimo-marker" class="mimo-marker" transform="translate(${depotPoint.x} ${depotPoint.y})"><rect class="mimo-bubble" x="-120" y="-59" width="240" height="25" style="display:none"/><text id="mimo-bubble-text" x="0" y="-42" text-anchor="middle" textLength="224" lengthAdjust="spacingAndGlyphs"></text><circle class="mimo-marker-body" r="22"/><image class="mimo-map-image${state.assetFailed.has(mimoStatus) ? " failed" : ""}" href="/assets/mimo-${mimoStatus}.png" x="-22" y="-22" width="44" height="44" preserveAspectRatio="xMidYMid meet"/><text class="mimo-marker-face" x="0" y="5" text-anchor="middle">🐒</text></g>`;
-    state.mimoPosition = depotPoint;
+    const mimoPoint = mimoTarget(depotPoint);
+    markup += `<g id="mimo-marker" class="mimo-marker" transform="translate(${mimoPoint.x} ${mimoPoint.y})"><rect class="mimo-bubble" x="-90" y="-49" width="180" height="21" style="display:none"/><text id="mimo-bubble-text" x="0" y="-35" text-anchor="middle" textLength="164" lengthAdjust="spacingAndGlyphs"></text><circle class="mimo-marker-body" r="22"/><image class="mimo-map-image${state.assetFailed.has(mimoStatus) ? " failed" : ""}" href="/assets/mimo-${mimoStatus}.png" x="-22" y="-22" width="44" height="44" preserveAspectRatio="xMidYMid meet"/><text class="mimo-marker-face" x="0" y="5" text-anchor="middle">🐒</text></g>`;
+    state.mimoPosition = mimoPoint;
   }
   svg.innerHTML = markup;
   if (!old) {
@@ -134,10 +158,26 @@ function drawMap(svg, plan, old = false) {
 }
 
 function setBubble(text) {
-  const message = String(text || "").trim();
+  const fullMessage = String(text || "").trim().replace(/\s+/g, " ");
+  const message = fullMessage.length > 34 ? `${fullMessage.slice(0, 33).trimEnd()}…` : fullMessage;
   const bubble = $("#mimo-bubble-text");
-  if (bubble) bubble.textContent = message;
+  const marker = $("#mimo-marker");
+  const pointMatch = marker?.getAttribute("transform")?.match(/translate\(([-\d.]+)\s+([-\d.]+)\)/);
+  const markerX = pointMatch ? Number(pointMatch[1]) : 180;
+  const markerY = pointMatch ? Number(pointMatch[2]) : 115;
   const rect = $("#mimo-marker .mimo-bubble");
+  if (bubble) {
+    bubble.textContent = message;
+    if (markerX < 102) { bubble.setAttribute("x", "2"); bubble.setAttribute("text-anchor", "start"); }
+    else if (markerX > 258) { bubble.setAttribute("x", "358"); bubble.setAttribute("text-anchor", "end"); }
+    else { bubble.setAttribute("x", String(markerX)); bubble.setAttribute("text-anchor", "middle"); }
+    bubble.setAttribute("y", markerY < 55 ? String(markerY + 41) : String(markerY - 35));
+  }
+  if (rect) {
+    const anchor = markerX < 102 ? 2 : markerX > 258 ? 178 : markerX - 90;
+    rect.setAttribute("x", String(anchor));
+    rect.setAttribute("y", markerY < 55 ? String(markerY + 27) : String(markerY - 49));
+  }
   if (rect) rect.style.display = message ? "" : "none";
 }
 
@@ -148,8 +188,10 @@ function walkTo(target, duration = 650) {
   const origin = state.mimoPosition || state.depotPoint || target;
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (reducedMotion || duration <= 0) {
-    marker.setAttribute("transform", `translate(${target.x} ${target.y})`);
-    state.mimoPosition = target;
+    const position = mimoTarget(target);
+    marker.setAttribute("transform", `translate(${position.x} ${position.y})`);
+    state.mimoPosition = position;
+    setBubble($("#mimo-bubble-text")?.textContent || "");
     return Promise.resolve();
   }
   return new Promise(resolve => {
@@ -158,11 +200,13 @@ function walkTo(target, duration = 650) {
       if (moveId !== state.moveId) { resolve(); return; }
       const progress = Math.min(1, (now - started) / duration);
       const eased = progress * progress * (3 - 2 * progress);
-      const current = { x: origin.x + (target.x - origin.x) * eased, y: origin.y + (target.y - origin.y) * eased };
+      const destination = mimoTarget(target);
+      const current = { x: origin.x + (destination.x - origin.x) * eased, y: origin.y + (destination.y - origin.y) * eased };
       marker.setAttribute("transform", `translate(${current.x} ${current.y})`);
       state.mimoPosition = current;
+      setBubble($("#mimo-bubble-text")?.textContent || "");
       if (progress < 1) requestAnimationFrame(frame);
-      else { state.mimoPosition = target; resolve(); }
+      else { state.mimoPosition = destination; resolve(); }
     };
     requestAnimationFrame(frame);
   });
@@ -177,7 +221,7 @@ function pause(ms, tourId) {
 
 function changeMessage(change, unservedById) {
   const stop = stopById(change.stop_id);
-  const stopName = stop?.id || change.stop_id;
+  const stopName = stopLabel(stop?.id || change.stop_id);
   if (change.type === "kurye_degisti") return `${stopName}: ${courierName(change.old_courier_id)}'ten ${courierName(change.new_courier_id)}'ye geçti`;
   if (change.type === "sira_degisti") return `${stopName}: sırası değişti`;
   if (change.type === "yeni_atlandi") return `${stopName}: atlandı: ${unservedById.get(change.stop_id) || ""}`;
@@ -200,7 +244,7 @@ async function runTour(data) {
   if ((data.violations || []).length) {
     if (tourId !== state.tourId) return;
     if (lastViolation) {
-      setBubble(`${stopById(lastViolation.stop_id)?.id || lastViolation.stop_id}: ${lastViolation.description}`);
+      setBubble(`${stopLabel(stopById(lastViolation.stop_id)?.id || lastViolation.stop_id)}: ${lastViolation.description}`);
       await walkTo(state.coordinates.get(lastViolation.stop_id));
     } else {
       setBubble(data.violations.at(-1).description);
@@ -239,18 +283,22 @@ function renderChangeDetails(data) {
   const details = $("#validation-details");
   const rows = [];
   for (const violation of data.violations || []) rows.push(`<li>İhlal: ${escapeHtml(violation.description)}</li>`);
-  for (const item of data.unserved || []) rows.push(`<li>Atlandı: ${escapeHtml(item.stop_id)} — ${escapeHtml(item.reason)}</li>`);
+  for (const item of data.unserved || []) rows.push(`<li>Atlandı: ${escapeHtml(stopLabel(item.stop_id))} — ${escapeHtml(item.reason)}</li>`);
   const changes = data.diff?.changes || [];
   const meaningful = changes.filter(change => change.type !== "sadece_saat_kaydi");
-  const courierChange = change => `${escapeHtml(change.stop_id)} · ${escapeHtml(courierName(change.old_courier_id))} → ${escapeHtml(courierName(change.new_courier_id))}`;
+  const courierChange = change => {
+    const oldIndex = Math.max(0, state.scenario.couriers.findIndex(courier => courier.id === change.old_courier_id));
+    const newIndex = Math.max(0, state.scenario.couriers.findIndex(courier => courier.id === change.new_courier_id));
+    return `${escapeHtml(stopLabel(change.stop_id))} · <span class="change-courier"><i style="--courier-color:${courierColors[oldIndex % courierColors.length]}"></i>${escapeHtml(courierName(change.old_courier_id))}</span> → <span class="change-courier"><i style="--courier-color:${courierColors[newIndex % courierColors.length]}"></i>${escapeHtml(courierName(change.new_courier_id))}</span>`;
+  };
   for (const change of meaningful) {
     const label = change.type === "kurye_degisti" ? courierChange(change)
-      : change.type === "sira_degisti" ? `${escapeHtml(change.stop_id)} · sırası değişti`
-        : `${escapeHtml(change.stop_id)} · atlandı`;
+      : change.type === "sira_degisti" ? `${escapeHtml(stopLabel(change.stop_id))} · sırası değişti`
+        : `${escapeHtml(stopLabel(change.stop_id))} · atlandı`;
     rows.push(`<li>${label}</li>`);
   }
   const timeOnly = changes.filter(change => change.type === "sadece_saat_kaydi");
-  const timeRows = timeOnly.map(change => `<li>${escapeHtml(change.stop_id)} · ${escapeHtml(formatClock(change.old_arrival_min))} → ${escapeHtml(formatClock(change.new_arrival_min))}</li>`).join("");
+  const timeRows = timeOnly.map(change => `<li>${escapeHtml(stopLabel(change.stop_id))} · ${escapeHtml(formatClock(change.old_arrival_min))} → ${escapeHtml(formatClock(change.new_arrival_min))}</li>`).join("");
   details.innerHTML = rows.length ? `<ul>${rows.join("")}</ul>` : "";
   if (timeOnly.length) details.insertAdjacentHTML("beforeend", `<details class="time-only-details"><summary>+${timeOnly.length} saat kayması (göster)</summary><ul>${timeRows}</ul></details>`);
 }
@@ -270,10 +318,24 @@ function visitForStop(stopId) {
 }
 
 function constraintSummary(rule) {
-  if (rule.type === "courier_unavailable_after") return `${courierName(rule.courier_id)} ${formatClock(rule.time_min)} sonrası yok`;
-  if (rule.type === "max_stops") return `${courierName(rule.courier_id)} en fazla ${rule.n} durak`;
-  if (rule.type === "tag_deadline") return `${rule.tag}: ${formatClock(rule.within_minutes_from_start)} öncesi`;
+  if (rule.type === "courier_unavailable_after") return `${courierName(rule.courier_id)}: ${formatClock(rule.time_min)}'den sonra çalışmaz`;
+  if (rule.type === "max_stops") return `${courierName(rule.courier_id)}: en fazla ${rule.n} durak`;
+  if (rule.type === "tag_deadline") {
+    const rawTag = String(rule.tag || "");
+    const tag = ["soğuk_zincir", "cold_chain"].includes(rawTag.toLocaleLowerCase("tr-TR"))
+      ? "Soğuk zincir"
+      : rawTag.replace(/[_-]+/g, " ");
+    return `${tag.charAt(0).toLocaleUpperCase("tr-TR")}${tag.slice(1)}: ilk ${rule.within_minutes_from_start} dk içinde teslim`;
+  }
   return "";
+}
+
+function renderConstraintSummaries(value) {
+  const rules = Array.isArray(value?.constraints) ? value.constraints : [];
+  const lines = rules.map(constraintSummary).filter(Boolean);
+  const understood = $("#understood");
+  understood.innerHTML = lines.length ? `<ul>${lines.map(line => `<li>${escapeHtml(line)}</li>`).join("")}</ul>` : "Anlaşılan kısıtlar burada görüntülenir.";
+  understood.classList.toggle("has-text", lines.length > 0);
 }
 
 function showStopDetails(stopId) {
@@ -284,7 +346,7 @@ function showStopDetails(stopId) {
   const courierId = assigned?.courierId;
   const courier = courierById(courierId);
   const constraints = matchingConstraints(stop, courierId).map(constraintSummary);
-  const details = [stop.id, courier?.name || "Atanmadı", assigned ? formatClock(assigned.visit.arrival_min) : "", ...constraints].filter(Boolean);
+  const details = [stopLabel(stop.id), courier?.name || "Atanmadı", assigned ? formatClock(assigned.visit.arrival_min) : "", ...constraints].filter(Boolean);
   setBubble(details.join(" · "));
   void walkTo(state.coordinates.get(stopId));
 }
@@ -385,8 +447,8 @@ $("#interpret").addEventListener("click", async () => {
     const result = await api("/interpret", { text });
     $("#interpret-status").textContent = result.ok ? "ONAY BEKLİYOR" : "ANLAŞILAMADI";
     $("#interpret-status").className = `status-chip ${result.ok ? "ok" : "bad"}`;
-    $("#understood").textContent = result.understood_text || result.message;
-    $("#understood").classList.toggle("has-text", result.ok);
+    renderConstraintSummaries(result.constraints);
+    if (!result.ok) $("#understood").textContent = result.understood_text || result.message;
     $("#constraints").value = JSON.stringify(result.constraints, null, 2);
     $("#approve").disabled = !result.ok;
     if (!result.ok) showError($("#interpret-error"), result.message);
@@ -399,6 +461,7 @@ $("#correct").addEventListener("click", () => {
   try {
     const constraints = JSON.parse($("#constraints").value);
     if (!Array.isArray(constraints.constraints)) throw new Error("constraints alanı bir liste olmalı.");
+    renderConstraintSummaries(constraints);
     $("#approve").disabled = false;
     $("#interpret-status").textContent = "DÜZENLENDİ";
     $("#interpret-status").className = "status-chip ok";
