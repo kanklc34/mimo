@@ -28,10 +28,11 @@
         <p class="error-text" id="plan-error" role="status"></p>
       </article>
       <article class="panel route-panel">
-        <div class="panel-head route-head"><div class="step-num">03</div><div class="route-title"><h2>Rota karşılaştırması</h2><p>Eski ve yeni dağılım · Haversine, düz çizgi tahmini</p></div><div class="avatar-wrap"><div class="mimo-avatar" id="mimo-avatar">🐵</div><div><strong id="mimo-caption">Mimo hazır</strong><small id="mimo-log">Talimatını bekliyor</small></div></div></div>
+        <div class="panel-head route-head"><div class="step-num">03</div><div class="route-title"><h2>Rota karşılaştırması</h2><p>Eski ve yeni dağılım · Haversine, düz çizgi tahmini</p></div><div class="avatar-wrap"><div class="mimo-avatar" id="mimo-avatar">🐒</div><div><strong id="mimo-caption">Mimo hazır</strong><small id="mimo-log">Talimatını bekliyor</small></div></div></div>
         <div class="route-compare"><div class="map-card"><div class="map-label"><span class="legend-dot old"></span>ÖNCEKİ PLAN <b id="old-distance">— km</b></div><svg id="old-map" viewBox="0 0 360 230" role="img" aria-label="Önceki rota haritası"></svg></div><div class="map-card"><div class="map-label"><span class="legend-dot fresh"></span>YENİ PLAN <b id="new-distance">— km</b></div><svg id="new-map" viewBox="0 0 360 230" role="img" aria-label="Yeni rota haritası"></svg></div></div>
         <div class="result-strip" id="result-strip"><span class="result-icon">✓</span><span id="result-text">Plan oluşturulduğunda doğrulama ve gerçek değişiklik sayısı burada görünür.</span></div>
         <div class="validation-details" id="validation-details"></div>
+        <div class="timeline-control"><div class="timeline-head"><label for="time-slider">GÜN İÇİ ZAMAN <strong id="time-label">08:00</strong></label><button class="button secondary" id="play-time" type="button">Oynat</button></div><input id="time-slider" type="range" min="0" max="480" step="1" value="0" aria-label="08:00-16:00 zaman çizgisi"><div class="timeline-couriers" id="timeline-couriers"></div></div>
         <div class="map-foot"><span><i class="legend-dot fresh"></i> Aktif rota</span><span><i class="legend-dot changed"></i> Değişen durak</span><span><i class="legend-dot muted"></i> Depo</span><span id="stop-count">50 durak · 4 kurye</span></div>
       </article>
     </section>

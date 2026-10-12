@@ -1,0 +1,396 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "unavailable-01",
+      "text": "Kurye 1 180. dakikadan sonra yok.",
+      "expected": [
+        {
+          "type": "courier_unavailable_after",
+          "courier_id": "courier-1",
+          "time_min": 180
+        }
+      ],
+      "category": "courier_unavailable_after"
+    },
+    {
+      "id": "unavailable-02",
+      "text": "Saat 11:00'den sonra Kurye 2'ye iş verme.",
+      "expected": [
+        {
+          "type": "courier_unavailable_after",
+          "courier_id": "courier-2",
+          "time_min": 180
+        }
+      ],
+      "category": "courier_unavailable_after"
+    },
+    {
+      "id": "unavailable-03",
+      "text": "Kurye 3, 14'ten sonra yok.",
+      "expected": [
+        {
+          "type": "courier_unavailable_after",
+          "courier_id": "courier-3",
+          "time_min": 360
+        }
+      ],
+      "category": "courier_unavailable_after"
+    },
+    {
+      "id": "unavailable-04",
+      "text": "Kurye 4'ü saat 09.45'ten sonra kullanma.",
+      "expected": [
+        {
+          "type": "courier_unavailable_after",
+          "courier_id": "courier-4",
+          "time_min": 105
+        }
+      ],
+      "category": "courier_unavailable_after"
+    },
+    {
+      "id": "unavailable-05",
+      "text": "Kurye 1 mesainin ilk üç saati dolunca çıksın.",
+      "expected": [
+        {
+          "type": "courier_unavailable_after",
+          "courier_id": "courier-1",
+          "time_min": 180
+        }
+      ],
+      "category": "courier_unavailable_after"
+    },
+    {
+      "id": "unavailable-06",
+      "text": "İki numaralı kurye 12:30'dan sonra görev almasın.",
+      "expected": [
+        {
+          "type": "courier_unavailable_after",
+          "courier_id": "courier-2",
+          "time_min": 270
+        }
+      ],
+      "category": "courier_unavailable_after"
+    },
+    {
+      "id": "tag-deadline-01",
+      "text": "Soğuk zincir teslimatları ilk iki saatte bitsin.",
+      "expected": [
+        {
+          "type": "tag_deadline",
+          "tag": "soğuk_zincir",
+          "within_minutes_from_start": 120
+        }
+      ],
+      "category": "tag_deadline"
+    },
+    {
+      "id": "tag-deadline-02",
+      "text": "Soğuk zincir paketlerini vardiya başlangıcından itibaren ilk 90 dakikada ulaştır.",
+      "expected": [
+        {
+          "type": "tag_deadline",
+          "tag": "soğuk_zincir",
+          "within_minutes_from_start": 90
+        }
+      ],
+      "category": "tag_deadline"
+    },
+    {
+      "id": "tag-deadline-03",
+      "text": "Soğuk zincirleri 10:30'a kadar teslim et.",
+      "expected": [
+        {
+          "type": "tag_deadline",
+          "tag": "soğuk_zincir",
+          "within_minutes_from_start": 150
+        }
+      ],
+      "category": "tag_deadline"
+    },
+    {
+      "id": "tag-deadline-04",
+      "text": "Etiketi soğuk_zincir olanlar ilk 2 saat içinde teslim edilsin.",
+      "expected": [
+        {
+          "type": "tag_deadline",
+          "tag": "soğuk_zincir",
+          "within_minutes_from_start": 120
+        }
+      ],
+      "category": "tag_deadline"
+    },
+    {
+      "id": "tag-deadline-05",
+      "text": "En geç 11.00'de soğuk zincir paketleri teslim edilmiş olsun.",
+      "expected": [
+        {
+          "type": "tag_deadline",
+          "tag": "soğuk_zincir",
+          "within_minutes_from_start": 180
+        }
+      ],
+      "category": "tag_deadline"
+    },
+    {
+      "id": "tag-deadline-06",
+      "text": "Soğuk zincir grubuna 14:00'a kadar zaman tanı.",
+      "expected": [
+        {
+          "type": "tag_deadline",
+          "tag": "soğuk_zincir",
+          "within_minutes_from_start": 360
+        }
+      ],
+      "category": "tag_deadline"
+    },
+    {
+      "id": "max-stops-01",
+      "text": "Kurye 1 en fazla 8 durak alsın.",
+      "expected": [
+        {
+          "type": "max_stops",
+          "courier_id": "courier-1",
+          "n": 8
+        }
+      ],
+      "category": "max_stops"
+    },
+    {
+      "id": "max-stops-02",
+      "text": "Kurye 2 beşten fazla durak almasın.",
+      "expected": [
+        {
+          "type": "max_stops",
+          "courier_id": "courier-2",
+          "n": 5
+        }
+      ],
+      "category": "max_stops"
+    },
+    {
+      "id": "max-stops-03",
+      "text": "3 numaralı kurye en fazla üç nokta alsın.",
+      "expected": [
+        {
+          "type": "max_stops",
+          "courier_id": "courier-3",
+          "n": 3
+        }
+      ],
+      "category": "max_stops"
+    },
+    {
+      "id": "max-stops-04",
+      "text": "Kurye 4 maksimum 12 teslimat alsın.",
+      "expected": [
+        {
+          "type": "max_stops",
+          "courier_id": "courier-4",
+          "n": 12
+        }
+      ],
+      "category": "max_stops"
+    },
+    {
+      "id": "max-stops-05",
+      "text": "Kurye 1'e 0 durak ver.",
+      "expected": [
+        {
+          "type": "max_stops",
+          "courier_id": "courier-1",
+          "n": 0
+        }
+      ],
+      "category": "max_stops"
+    },
+    {
+      "id": "max-stops-06",
+      "text": "Dördüncü kuryeye üst sınır olarak 7 durak koy.",
+      "expected": [
+        {
+          "type": "max_stops",
+          "courier_id": "courier-4",
+          "n": 7
+        }
+      ],
+      "category": "max_stops"
+    },
+    {
+      "id": "combined-01",
+      "text": "Kurye 1 180. dakikadan sonra çalışmasın ve en fazla 8 durak alsın.",
+      "expected": [
+        {
+          "type": "courier_unavailable_after",
+          "courier_id": "courier-1",
+          "time_min": 180
+        },
+        {
+          "type": "max_stops",
+          "courier_id": "courier-1",
+          "n": 8
+        }
+      ],
+      "category": "combined"
+    },
+    {
+      "id": "combined-02",
+      "text": "11:00'den sonra Kurye 2 yok; soğuk zincir ilk iki saatte bitsin.",
+      "expected": [
+        {
+          "type": "courier_unavailable_after",
+          "courier_id": "courier-2",
+          "time_min": 180
+        },
+        {
+          "type": "tag_deadline",
+          "tag": "soğuk_zincir",
+          "within_minutes_from_start": 120
+        }
+      ],
+      "category": "combined"
+    },
+    {
+      "id": "combined-03",
+      "text": "Kurye 3 en çok 6 durak alsın; soğuk zincir 10:30'a kadar teslim edilsin.",
+      "expected": [
+        {
+          "type": "max_stops",
+          "courier_id": "courier-3",
+          "n": 6
+        },
+        {
+          "type": "tag_deadline",
+          "tag": "soğuk_zincir",
+          "within_minutes_from_start": 150
+        }
+      ],
+      "category": "combined"
+    },
+    {
+      "id": "combined-04",
+      "text": "Kurye 1, 14:00'ten sonra çalışmasın; en fazla 5 durak alsın ve soğuk zincir ilk 120 dakikada teslim edilsin.",
+      "expected": [
+        {
+          "type": "courier_unavailable_after",
+          "courier_id": "courier-1",
+          "time_min": 360
+        },
+        {
+          "type": "max_stops",
+          "courier_id": "courier-1",
+          "n": 5
+        },
+        {
+          "type": "tag_deadline",
+          "tag": "soğuk_zincir",
+          "within_minutes_from_start": 120
+        }
+      ],
+      "category": "combined"
+    },
+    {
+      "id": "combined-05",
+      "text": "Kurye 4 12:00'den sonra yok, dokuz durağı geçmesin, soğuk zincir ilk üç saatte teslim edilsin.",
+      "expected": [
+        {
+          "type": "courier_unavailable_after",
+          "courier_id": "courier-4",
+          "time_min": 240
+        },
+        {
+          "type": "max_stops",
+          "courier_id": "courier-4",
+          "n": 9
+        },
+        {
+          "type": "tag_deadline",
+          "tag": "soğuk_zincir",
+          "within_minutes_from_start": 180
+        }
+      ],
+      "category": "combined"
+    },
+    {
+      "id": "combined-06",
+      "text": "Kurye 2'ye en çok 7 durak ver ve 13:15'ten sonra görev verme.",
+      "expected": [
+        {
+          "type": "max_stops",
+          "courier_id": "courier-2",
+          "n": 7
+        },
+        {
+          "type": "courier_unavailable_after",
+          "courier_id": "courier-2",
+          "time_min": 315
+        }
+      ],
+      "category": "combined"
+    },
+    {
+      "id": "combined-07",
+      "text": "Soğuk zincirleri 11'e kadar teslim et, Kurye 3'e dört duraktan fazla yükleme.",
+      "expected": [
+        {
+          "type": "tag_deadline",
+          "tag": "soğuk_zincir",
+          "within_minutes_from_start": 180
+        },
+        {
+          "type": "max_stops",
+          "courier_id": "courier-3",
+          "n": 4
+        }
+      ],
+      "category": "combined"
+    },
+    {
+      "id": "combined-08",
+      "text": "Kurye 1 için en fazla 10 teslimat olsun, Kurye 2 09:30'dan sonra yok, soğuk zincir 10:00'a kadar tamamlansın.",
+      "expected": [
+        {
+          "type": "max_stops",
+          "courier_id": "courier-1",
+          "n": 10
+        },
+        {
+          "type": "courier_unavailable_after",
+          "courier_id": "courier-2",
+          "time_min": 90
+        },
+        {
+          "type": "tag_deadline",
+          "tag": "soğuk_zincir",
+          "within_minutes_from_start": 120
+        }
+      ],
+      "category": "combined"
+    },
+    {
+      "id": "ambiguous-01",
+      "text": "Kurye 1'e dikkat et.",
+      "expected": [],
+      "category": "ambiguous"
+    },
+    {
+      "id": "ambiguous-02",
+      "text": "Önce yakın olanları götür, rotayı toparla.",
+      "expected": [],
+      "category": "ambiguous"
+    },
+    {
+      "id": "ambiguous-03",
+      "text": "Kurye 2'nin mesaisi biraz kısalsın.",
+      "expected": [],
+      "category": "ambiguous"
+    },
+    {
+      "id": "ambiguous-04",
+      "text": "Soğuk zincirleri zamanında ver, kurye sayısı yeterli olsun.",
+      "expected": [],
+      "category": "ambiguous"
+    }
+  ]
+}

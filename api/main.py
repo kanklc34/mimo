@@ -112,6 +112,7 @@ def create_plan(request: PlanRequest) -> dict[str, Any]:
         "plan": plan.model_dump(mode="json"),
         "violations": [violation.model_dump(mode="json") for violation in violations],
         "summary": {**report, "distance_km": round(current_distance, 2)},
+        "constraints": constraints.model_dump(mode="json"),
         "diff": diff,
         "unserved": [
             {"stop_id": stop_id, "reason": unserved_reasons.get(stop_id, "Planlanmadı")}

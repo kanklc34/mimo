@@ -17,6 +17,8 @@ Uygulama `http://127.0.0.1:8000` adresindedir. OR-Tools proje bağımlılıklar�
 - Plan bağımsız validator ile kontrol edilir; rota özeti, önceki plan farkları ve atlanan duraklar döner.
 - Diff türleri kurye, sıra, yalnızca saat kaydı ve yeni atlanan durak farklarını ayırır. Özet gerçek değişiklik sayısını öne çıkarır; yalnızca saat farkları soluk gösterilir.
 - Web istemcisi framework kullanmayan HTML/CSS/JavaScript ve SVG rota gösterimidir. Haversine harita altlığı olmayan düz çizgi tahminidir.
+- Haritada hareket eden Mimo, depo konumundan başlar; tur durak ve ihlal verisini `/plan` yanıtından, koordinat/servis/vardiya bilgisini `/scenario` yanıtından alır. Durak seçimi turu keser. Zaman çubuğu durak varışları/servis süreleriyle kurye işaretçilerini yürütür; `/log` Mimo durumunu beslemeye devam eder. Saat kaymaları katlanabilir listede görünür.
+- `/plan` yanıtındaki normalize `constraints` alanı, durak seçildiğinde o durağı etkileyen kısıtları göstermek için kullanılır. Tarayıcı kodu `.env` veya API anahtarı okumaz. Hareket `prefers-reduced-motion` tercihini izler; eksik durum PNG'si için emoji yedeği kullanılır.
 
 ## Test
 

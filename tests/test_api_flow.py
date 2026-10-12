@@ -9,6 +9,8 @@ def test_scenario_endpoint_returns_seeded_scenario():
 
     assert len(data["stops"]) == 50
     assert len(data["couriers"]) == 4
+    assert {"lat", "lon", "service_min"} <= data["stops"][0].keys()
+    assert {"shift_start", "shift_end"} <= data["couriers"][0].keys()
     assert any(route.path == "/scenario" for route in app.routes)
 
 
@@ -61,7 +63,21 @@ def test_plan_includes_validation_summary_diff_and_unserved(monkeypatch):
     assert "time_only_count" in second["diff"]
     assert all("type" in item for item in second["diff"]["changes"])
     assert "unserved" in second
+    assert "constraints" in second
+    assert second["constraints"] == {"constraints": []}
+    assert all("type" in change for change in second["diff"]["changes"])
     assert any(event["step"] in {"hesaplandı", "doğrulandı"} for event in main.get_log()["events"])
+
+
+def test_plan_returns_normalized_constraints_for_stop_details(monkeypatch):
+    monkeypatch.setattr(main.planner, "plan", lambda scenario, constraints, previous_plan=None: (naive_plan(scenario), {}))
+    data = main.create_plan(PlanRequest(constraints={"constraints": [
+        {"type": "max_stops", "courier_id": "courier-1", "n": 7},
+    ]}))
+
+    assert data["constraints"] == {"constraints": [
+        {"type": "max_stops", "courier_id": "courier-1", "n": 7},
+    ]}
 
 
 def test_invalid_plan_is_not_marked_valid(monkeypatch):
