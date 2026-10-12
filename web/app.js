@@ -34,15 +34,23 @@ function formatClock(minutes) {
 
 function mimoAsset(status) {
   const avatar = $("#mimo-avatar");
+  const fallback = status === "uyari" ? "🙈" : status === "basari" ? "🐵" : "🐒";
+  const mapImage = $("#mimo-marker .mimo-map-image");
+  const mapFallback = $("#mimo-marker .mimo-marker-face");
+  if (mapImage && mapFallback) {
+    mapFallback.textContent = fallback;
+    mapImage.classList.toggle("failed", state.assetFailed.has(status));
+    if (!state.assetFailed.has(status)) mapImage.setAttribute("href", `/assets/mimo-${status}.png`);
+  }
   if (state.assetFailed.has(status)) {
-    avatar.textContent = status === "uyari" ? "🙈" : status === "basari" ? "🐵" : "🐒";
+    avatar.textContent = fallback;
     return;
   }
   const img = document.createElement("img");
   img.alt = "Mimo durumu";
   img.onerror = () => {
     state.assetFailed.add(status);
-    if (state.mimoState === status) avatar.textContent = status === "uyari" ? "🙈" : status === "basari" ? "🐵" : "🐒";
+    if (state.mimoState === status) avatar.textContent = fallback;
   };
   img.src = `/assets/mimo-${status}.png`;
   avatar.replaceChildren(img);
@@ -107,18 +115,30 @@ function drawMap(svg, plan, old = false) {
     for (const [index, courier] of state.scenario.couriers.entries()) {
       markup += `<g class="courier-marker" id="courier-marker-${escapeHtml(courier.id)}" transform="translate(${depotPoint.x} ${depotPoint.y})"><circle r="5.2" fill="${courierColors[index % courierColors.length]}"/><title>${escapeHtml(courier.name)}</title></g>`;
     }
-    markup += `<g id="mimo-marker" class="mimo-marker" transform="translate(${depotPoint.x} ${depotPoint.y})"><rect class="mimo-bubble" x="-78" y="-53" width="156" height="22" rx="7"/><text id="mimo-bubble-text" x="0" y="-38" text-anchor="middle" textLength="145" lengthAdjust="spacingAndGlyphs"></text><circle class="mimo-marker-body" r="11"/><text class="mimo-marker-face" x="0" y="5" text-anchor="middle">🐒</text></g>`;
+    const mimoStatus = state.mimoState || "dusunuyor";
+    markup += `<g id="mimo-marker" class="mimo-marker" transform="translate(${depotPoint.x} ${depotPoint.y})"><rect class="mimo-bubble" x="-120" y="-59" width="240" height="25" style="display:none"/><text id="mimo-bubble-text" x="0" y="-42" text-anchor="middle" textLength="224" lengthAdjust="spacingAndGlyphs"></text><circle class="mimo-marker-body" r="22"/><image class="mimo-map-image${state.assetFailed.has(mimoStatus) ? " failed" : ""}" href="/assets/mimo-${mimoStatus}.png" x="-22" y="-22" width="44" height="44" preserveAspectRatio="xMidYMid meet"/><text class="mimo-marker-face" x="0" y="5" text-anchor="middle">🐒</text></g>`;
     state.mimoPosition = depotPoint;
   }
   svg.innerHTML = markup;
-  if (!old) renderTimelineMarkers();
+  if (!old) {
+    const mapImage = $("#mimo-marker .mimo-map-image");
+    mapImage?.addEventListener("error", () => {
+      const status = state.mimoState || "dusunuyor";
+      state.assetFailed.add(status);
+      mapImage.classList.add("failed");
+      const face = $("#mimo-marker .mimo-marker-face");
+      if (face) face.textContent = status === "uyari" ? "🙈" : status === "basari" ? "🐵" : "🐒";
+    });
+    renderTimelineMarkers();
+  }
 }
 
 function setBubble(text) {
+  const message = String(text || "").trim();
   const bubble = $("#mimo-bubble-text");
-  if (bubble) bubble.textContent = text || "";
+  if (bubble) bubble.textContent = message;
   const rect = $("#mimo-marker .mimo-bubble");
-  if (rect) rect.style.display = text ? "" : "none";
+  if (rect) rect.style.display = message ? "" : "none";
 }
 
 function walkTo(target, duration = 650) {
@@ -195,7 +215,7 @@ async function runTour(data) {
 }
 
 function renderResult(data, { tour = true } = {}) {
-  state.previous = state.plan;
+  state.previous = state.plan || (!tour && data.diff?.previous_distance_km == null ? data.plan : null);
   state.plan = data.plan;
   state.constraints = data.constraints || { constraints: [] };
   const changes = data.diff?.changes || [];

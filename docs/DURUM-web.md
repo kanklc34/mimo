@@ -34,3 +34,6 @@ Tam test paketi son koşuda **61 geçti**, 3 OR-Tools SWIG deprecation uyarısı
 - Başlıkta mevcut Mimo Kurye PNG logosu kullanılır. Uzak font/CDN kaldırıldı; sistem fontları, okunabilir 16 px gövde metni, belirgin önceki/yeni kilometre değerleri ve doğrulama/ihlal renkleri uygulandı.
 - HTML işaretlemesi ve CSS güncellendi. `web/app.js`, API ve mevcut JS ID/sınıf/data bağları değiştirilmedi.
 - Son kontrol: `node --check web/app.js` başarılı; `tests/test_api.py`, `tests/test_api_flow.py`, `tests/test_api_gemini.py` **11 geçti**; `git diff --check` temiz.
+- Harita balonu boş metinde gizlenir; dolu metin tek satırda daha okunur boyutta gösterilir.
+- Harita Mimo işaretçisi 44 px durum PNG'si kullanır; yükleme hatasında emoji yedeğine döner.
+- Önceki rota ilk yüklemede baseline planla çizilir; eski rota çizgileri artık kurye renklerini korur.
