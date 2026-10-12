@@ -172,6 +172,9 @@ textarea::placeholder { color: var(--muted); opacity: 1; }
 .status-chip.ok { border-color: var(--accent); color: var(--accent); }
 .status-chip.bad { border-color: var(--violation); color: var(--violation); }
 .understood { min-height: 40px; margin-bottom: 9px; padding: 7px 9px; border-left: 3px solid var(--line); background: var(--canvas); color: var(--muted); font-size: 14px; line-height: 1.4; }
+.understood strong, .understood span { display: block; }
+.understood strong { color: var(--ink); }
+.understood span { margin-top: 1px; font-size: 13px; }
 .understood.has-text { border-left-color: var(--accent); color: var(--ink); }
 .understood ul { margin: 0; padding-left: 18px; }
 .understood li { margin: 1px 0; }
@@ -180,6 +183,18 @@ textarea::placeholder { color: var(--muted); opacity: 1; }
 .json-edit[open] summary { margin-bottom: 8px; }
 .json-editor { min-height: 82px; width: 100%; font-family: Consolas, "Courier New", monospace; font-size: 14px; }
 .edit-hint { margin: 5px 0 8px; }
+.rule-list { display: grid; gap: 8px; max-height: 280px; overflow: auto; }
+.rule-card { padding: 10px; border: 1px solid var(--line); border-radius: 11px; background: #fbfcfb; }
+.rule-card > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; color: var(--ink); font-size: 13px; }
+.rule-remove { padding: 3px 6px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 12px; cursor: pointer; }
+.rule-remove:hover, .rule-remove:focus-visible { background: #f7e9e7; color: var(--violation); }
+.rule-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rule-field { min-width: 0; display: grid; gap: 4px; color: var(--muted); font-size: 12px; font-weight: 600; }
+.rule-field select, .rule-field input, .rule-add-controls select { width: 100%; min-height: 36px; padding: 6px 8px; border: 1px solid #cbd5ce; border-radius: 8px; background: white; color: var(--ink); font: inherit; font-size: 14px; }
+.rule-add-row { margin-top: 12px; }
+.rule-add-controls { display: flex; gap: 8px; }
+.rule-add-controls select { flex: 1; min-width: 0; }
+.rule-add-controls .button { min-height: 36px; }
 .button-row { display: flex; gap: 8px; margin-top: auto; }
 .time-only-change { color: var(--muted); opacity: .75; }
 .change-list { border-top: 1px solid var(--line); padding-top: 5px; }

@@ -25,3 +25,13 @@ def test_route_map_has_an_accessible_expanded_inspection_view():
     assert '"[data-route-map]"' in script
     assert '"[data-overview-map]"' in script
     assert '"#old-map-card"' in script
+
+
+def test_constraint_editing_uses_plain_language_form_controls_not_json():
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+
+    assert 'id="constraint-list"' in html
+    assert 'id="add-constraint-type"' in html
+    assert 'id="add-constraint"' in html
+    assert 'id="constraints"' not in html
+    assert 'JSON\'u düzenle' not in html

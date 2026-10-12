@@ -372,12 +372,53 @@ function constraintSummary(rule) {
   return "";
 }
 
+function selectControl(field, label, options, selected) {
+  const choices = options.map(option => {
+    const value = typeof option === "string" ? option : option.id;
+    const text = typeof option === "string" ? option.replace(/[_-]+/g, " ") : option.name;
+    return `<option value="${escapeHtml(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(text)}</option>`;
+  }).join("");
+  return `<label class="rule-field"><span>${escapeHtml(label)}</span><select data-field="${field}">${choices}</select></label>`;
+}
+
+function ruleCard(rule, index) {
+  const couriers = state.scenario?.couriers || [];
+  const tags = [...(state.scenario?.tags || [])].sort();
+  const title = {
+    courier_unavailable_after: "Kurye çalışma sınırı",
+    tag_deadline: "Etiketli paket teslim saati",
+    max_stops: "Kurye durak üst sınırı",
+  }[rule.type] || "Planlama kuralı";
+  let fields = "";
+  if (rule.type === "courier_unavailable_after") {
+    const clock = Number.isFinite(rule.time_min) ? formatClock(rule.time_min) : "";
+    fields = `${selectControl("courier_id", "Kurye", couriers, rule.courier_id)}<label class="rule-field"><span>En geç çalışma saati</span><input data-field="time_min" type="time" min="08:00" max="16:00" value="${escapeHtml(clock)}"></label>`;
+  } else if (rule.type === "tag_deadline") {
+    const clock = Number.isFinite(rule.within_minutes_from_start) ? formatClock(rule.within_minutes_from_start) : "";
+    fields = `${selectControl("tag", "Paket etiketi", tags, rule.tag)}<label class="rule-field"><span>En geç teslim saati</span><input data-field="within_minutes_from_start" type="time" min="08:00" max="16:00" value="${escapeHtml(clock)}"></label>`;
+  } else if (rule.type === "max_stops") {
+    fields = `${selectControl("courier_id", "Kurye", couriers, rule.courier_id)}<label class="rule-field"><span>En fazla durak</span><input data-field="n" type="number" min="0" step="1" value="${Number(rule.n)}"></label>`;
+  }
+  return `<article class="rule-card" data-rule-index="${index}"><header><strong>${escapeHtml(title)}</strong><button class="rule-remove" type="button" data-remove-rule aria-label="${escapeHtml(title)} kuralını sil">Kaldır</button></header><div class="rule-fields">${fields}</div></article>`;
+}
+
 function renderConstraintSummaries(value) {
   const rules = Array.isArray(value?.constraints) ? value.constraints : [];
   const lines = rules.map(constraintSummary).filter(Boolean);
+  state.constraints = { constraints: rules.map(rule => ({ ...rule })) };
   const understood = $("#understood");
-  understood.innerHTML = lines.length ? `<ul>${lines.map(line => `<li>${escapeHtml(line)}</li>`).join("")}</ul>` : "Anlaşılan kısıtlar burada görüntülenir.";
+  understood.innerHTML = lines.length
+    ? `<strong>${lines.length} kural anlaşıldı</strong><span>Alanları aşağıdan kontrol edip düzenleyin.</span>`
+    : "Henüz kural yok. İsterseniz aşağıdan bir kural ekleyin.";
   understood.classList.toggle("has-text", lines.length > 0);
+  $("#constraint-list").innerHTML = rules.map(ruleCard).join("");
+}
+
+function minutesFromClock(value) {
+  if (!/^\d{2}:\d{2}$/.test(value)) return null;
+  const [hours, minutes] = value.split(":").map(Number);
+  const result = hours * 60 + minutes - 8 * 60;
+  return result >= 0 ? result : null;
 }
 
 function showStopDetails(stopId) {
@@ -571,7 +612,8 @@ $("#reset-plan").addEventListener("click", async () => {
     $("#validation-details").parentElement.hidden = true;
     $("#validation-evidence").innerHTML = "";
     $("#instruction").value = "";
-    $("#constraints").value = JSON.stringify(state.constraints, null, 2);
+    $("#add-constraint-type").value = "";
+    $("#add-constraint").disabled = true;
     renderConstraintSummaries(state.constraints);
     $("#interpret-status").textContent = "BEKLİYOR";
     $("#interpret-status").className = "status-chip idle";
@@ -624,7 +666,6 @@ $("#interpret").addEventListener("click", async () => {
     $("#interpret-status").className = `status-chip ${result.ok ? "ok" : "bad"}`;
     renderConstraintSummaries(result.constraints);
     if (!result.ok) $("#understood").textContent = result.understood_text || result.message;
-    $("#constraints").value = JSON.stringify(result.constraints, null, 2);
     $("#approve").disabled = !result.ok;
     if (!result.ok) showError($("#interpret-error"), result.message);
     refreshLog();
@@ -632,24 +673,68 @@ $("#interpret").addEventListener("click", async () => {
   finally { $("#interpret").disabled = false; }
 });
 
-$("#correct").addEventListener("click", () => {
-  try {
-    const constraints = JSON.parse($("#constraints").value);
-    if (!Array.isArray(constraints.constraints)) throw new Error("constraints alanı bir liste olmalı.");
-    renderConstraintSummaries(constraints);
-    $("#approve").disabled = false;
-    $("#interpret-status").textContent = "DÜZENLENDİ";
-    $("#interpret-status").className = "status-chip ok";
-    showError($("#plan-error"), "");
-  } catch (error) { showError($("#plan-error"), `JSON okunamadı: ${error.message}`); }
+$("#add-constraint-type").addEventListener("change", event => {
+  $("#add-constraint").disabled = !event.target.value;
+});
+$("#add-constraint").addEventListener("click", () => {
+  const type = $("#add-constraint-type").value;
+  const courierId = state.scenario?.couriers[0]?.id;
+  if (!type) return;
+  let rule;
+  if (type === "courier_unavailable_after" && courierId) rule = { type, courier_id: courierId, time_min: 180 };
+  if (type === "tag_deadline") {
+    const tag = [...(state.scenario?.tags || [])].sort()[0];
+    if (tag) rule = { type, tag, within_minutes_from_start: 120 };
+  }
+  if (type === "max_stops" && courierId) rule = { type, courier_id: courierId, n: 24 };
+  if (!rule) { showError($("#plan-error"), "Bu kural için senaryoda uygun kurye veya etiket yok."); return; }
+  state.constraints.constraints.push(rule);
+  renderConstraintSummaries(state.constraints);
+  $("#add-constraint-type").value = "";
+  $("#add-constraint").disabled = true;
+  $("#approve").disabled = false;
+  $("#interpret-status").textContent = "DÜZENLENDİ";
+  $("#interpret-status").className = "status-chip ok";
+  showError($("#plan-error"), "");
+});
+$("#constraint-list").addEventListener("change", event => {
+  const row = event.target.closest("[data-rule-index]");
+  const field = event.target.dataset.field;
+  if (!row || !field) return;
+  const rule = state.constraints.constraints[Number(row.dataset.ruleIndex)];
+  if (!rule) return;
+  if (field === "time_min" || field === "within_minutes_from_start") rule[field] = minutesFromClock(event.target.value);
+  else if (field === "n") rule[field] = event.target.value === "" ? null : Number(event.target.value);
+  else rule[field] = event.target.value;
+  renderConstraintSummaries(state.constraints);
+  $("#approve").disabled = false;
+  $("#interpret-status").textContent = "DÜZENLENDİ";
+  $("#interpret-status").className = "status-chip ok";
+  showError($("#plan-error"), "");
+});
+$("#constraint-list").addEventListener("click", event => {
+  const remove = event.target.closest?.("[data-remove-rule]");
+  const row = remove?.closest("[data-rule-index]");
+  if (!row) return;
+  state.constraints.constraints.splice(Number(row.dataset.ruleIndex), 1);
+  renderConstraintSummaries(state.constraints);
+  $("#approve").disabled = state.constraints.constraints.length === 0;
+  $("#interpret-status").textContent = "DÜZENLENDİ";
+  $("#interpret-status").className = "status-chip ok";
 });
 
 $("#approve").addEventListener("click", async () => {
   showError($("#plan-error"), "");
+  const rules = state.constraints.constraints || [];
+  if (rules.some(rule => ("time_min" in rule && !Number.isFinite(rule.time_min))
+    || ("within_minutes_from_start" in rule && !Number.isFinite(rule.within_minutes_from_start))
+    || ("n" in rule && (!Number.isInteger(rule.n) || rule.n < 0)))) {
+    showError($("#plan-error"), "Saatleri seçin ve durak sayısına sıfır veya daha fazla tam sayı girin.");
+    return;
+  }
   try {
-    const constraints = JSON.parse($("#constraints").value);
     $("#approve").disabled = true;
-    const data = await api("/plan", { constraints });
+    const data = await api("/plan", { constraints: state.constraints });
     renderResult(data);
     refreshLog();
   } catch (error) { showError($("#plan-error"), error.message); refreshLog(); }

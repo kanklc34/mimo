@@ -68,13 +68,9 @@
         <article class="panel constraints-panel">
           <div class="panel-head"><span class="step-num">02</span><div><h2>Onay ve kısıtlar</h2><p>Sonucu kontrol edin, gerekirse düzenleyin.</p></div><span id="interpret-status" class="status-chip idle">BEKLİYOR</span></div>
           <div class="understood" id="understood">Anlaşılan kısıtlar burada görüntülenir.</div>
-          <details class="json-edit">
-            <summary>JSON'u düzenle</summary>
-            <label class="field-label" for="constraints">KISITLAR · JSON</label>
-            <textarea class="json-editor" id="constraints" spellcheck="false">{"constraints": []}</textarea>
-            <div class="edit-hint">JSON doğrudan düzenlenebilir.</div>
-          </details>
-          <div class="button-row"><button class="button secondary" id="correct">Düzelt</button><button class="button approve" id="approve" disabled>Onayla ve planla</button></div>
+          <div class="rule-list" id="constraint-list" aria-label="Düzenlenebilir planlama kuralları"></div>
+          <div class="rule-add-row"><label class="field-label" for="add-constraint-type">KURAL EKLE</label><div class="rule-add-controls"><select id="add-constraint-type"><option value="">Bir kural seçin</option><option value="courier_unavailable_after">Kurye çalışma bitişi</option><option value="tag_deadline">Etiketli paket teslim saati</option><option value="max_stops">Kurye durak üst sınırı</option></select><button class="button secondary" id="add-constraint" type="button" disabled>Ekle</button></div></div>
+          <div class="button-row"><button class="button approve" id="approve" disabled>Onayla ve planla</button></div>
           <p class="error-text" id="plan-error" role="status"></p>
         </article>
       </aside>
