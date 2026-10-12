@@ -28,14 +28,17 @@
     <section class="workspace" aria-label="Rota planlama çalışma alanı">
       <article class="panel route-panel">
         <div class="panel-head route-head">
-          <div class="step-num">03</div>
-          <div class="route-title"><h2>Rota karşılaştırması</h2><p>Önceki ve yeni plan · kuş uçuşu tahmin</p></div>
+          <div class="route-title"><h2>Günlük rota planı</h2><p>İstanbul · <span id="stop-count">50 durak · 4 kurye</span> · kuş uçuşu tahmin</p></div>
           <div class="avatar-wrap"><div class="mimo-avatar" id="mimo-avatar" aria-label="Mimo durumu"></div><div><strong id="mimo-caption">Mimo hazır</strong><small id="mimo-log">Talimat bekleniyor</small></div></div>
+          <button class="button secondary reset-button" id="reset-plan" type="button">Başa dön</button>
         </div>
-        <div class="reset-row"><button class="button secondary" id="reset-plan" type="button">Başa dön</button></div>
+        <div class="map-toolbar"><div class="overview-map-switch" id="overview-map-switch" role="group" aria-label="Haritada gösterilen plan">
+          <button class="overview-tab active" type="button" data-overview-map="new" aria-pressed="true">Yeni plan <span id="new-distance">— km</span></button>
+          <button class="overview-tab" type="button" data-overview-map="old" aria-pressed="false">Önceki plan <span id="old-distance">— km</span></button>
+        </div><button class="map-open map-open-main" type="button" data-route-map="new" aria-label="Rotayı büyüt ve incele">Rotayı incele ↗</button></div>
         <div class="route-compare">
-          <div class="map-card"><div class="map-label"><span class="legend-dot old" aria-hidden="true"></span><span>ÖNCEKİ PLAN</span><b id="old-distance">— km</b><button class="map-open" type="button" data-route-map="old" aria-label="Önceki rotayı büyüt">Büyüt ↗</button></div><svg id="old-map" viewBox="0 0 360 230" role="img" aria-label="Önceki rota haritası"></svg></div>
-          <div class="map-card"><div class="map-label"><span class="legend-dot fresh" aria-hidden="true"></span><span>YENİ PLAN</span><b id="new-distance">— km</b><button class="map-open" type="button" data-route-map="new" aria-label="Yeni rotayı büyüt">Büyüt ↗</button></div><svg id="new-map" viewBox="0 0 360 230" role="img" aria-label="Yeni rota haritası"></svg></div>
+          <div class="map-card" id="old-map-card" hidden><div class="map-label"><span class="legend-dot old" aria-hidden="true"></span><span>ÖNCEKİ PLAN</span></div><svg id="old-map" viewBox="0 0 360 230" role="img" aria-label="Önceki rota haritası"></svg></div>
+          <div class="map-card" id="new-map-card"><div class="map-label"><span class="legend-dot fresh" aria-hidden="true"></span><span>YENİ PLAN</span></div><svg id="new-map" viewBox="0 0 360 230" role="img" aria-label="Yeni rota haritası"></svg></div>
         </div>
         <div class="result-strip" id="result-strip"><span class="result-icon" aria-hidden="true"></span><span id="result-text">Plan doğrulama sonucu bekleniyor.</span></div>
         <div class="validation-evidence" id="validation-evidence" aria-live="polite"></div>
@@ -48,7 +51,7 @@
           <div class="timeline-couriers" id="timeline-couriers"></div>
         </div>
         </details>
-        <div class="map-foot"><span><i class="legend-dot fresh" aria-hidden="true"></i> Aktif rota</span><span><i class="legend-dot changed" aria-hidden="true"></i> Değişen durak</span><span><i class="legend-dot muted" aria-hidden="true"></i> Depo</span><span id="stop-count">Durak bilgisi yükleniyor</span></div>
+        <div class="map-foot"><span><i class="legend-dot fresh" aria-hidden="true"></i> Aktif rota</span><span><i class="legend-dot changed" aria-hidden="true"></i> Değişen durak</span><span><i class="legend-dot muted" aria-hidden="true"></i> Depo</span></div>
       </article>
 
       <aside class="workflow-panel" aria-label="Planlama adımları">

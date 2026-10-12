@@ -286,6 +286,7 @@ function renderResult(data, { tour = true } = {}) {
   $("#new-distance").textContent = `${data.summary.distance_km.toFixed(2)} km`;
   drawMap($("#old-map"), state.previous, true);
   drawMap($("#new-map"), state.plan, false);
+  renderOverviewMap("new");
   const strip = $("#result-strip");
   strip.classList.toggle("invalid", !data.summary.valid);
   $(".result-icon").textContent = data.summary.valid ? "✓" : "!";
@@ -436,6 +437,19 @@ function openRouteDetail(which, opener) {
   if (!dialog.open) dialog.showModal();
 }
 
+function renderOverviewMap(which = "new") {
+  const old = which === "old";
+  state.overviewMap = old ? "old" : "new";
+  $("#old-map-card").hidden = !old;
+  $("#new-map-card").hidden = old;
+  document.querySelectorAll("[data-overview-map]").forEach(button => {
+    const active = button.dataset.overviewMap === state.overviewMap;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  $(".map-open-main").dataset.routeMap = state.overviewMap;
+}
+
 function routePosition(courier, visits, minute) {
   let previousPoint = state.depotPoint;
   let previousTime = courier.shift_start;
@@ -503,6 +517,9 @@ $("#old-map").addEventListener("click", event => {
 document.querySelectorAll("[data-route-map]").forEach(button => button.addEventListener("click", () => {
   openRouteDetail(button.dataset.routeMap, button);
 }));
+document.querySelectorAll("[data-overview-map]").forEach(button => button.addEventListener("click", () => {
+  renderOverviewMap(button.dataset.overviewMap);
+}));
 [["#old-map", "old"], ["#new-map", "new"]].forEach(([selector, which]) => $(selector).addEventListener("click", event => {
   if (event.target.closest?.("[data-stop-id]")) return;
   openRouteDetail(which, $(`[data-route-map="${which}"]`));
@@ -547,6 +564,7 @@ $("#reset-plan").addEventListener("click", async () => {
     $("#new-distance").textContent = `${baseline.distance_km.toFixed(2)} km`;
     drawMap($("#old-map"), baseline.plan, true);
     drawMap($("#new-map"), baseline.plan, false);
+    renderOverviewMap("new");
     $("#result-strip").classList.remove("invalid");
     $("#result-text").textContent = "Başa dönüldü · gerçekten değişen 0 durak · saat kayması 0 · 0 ihlal · 0 atlanan durak";
     $("#validation-details").innerHTML = "";
