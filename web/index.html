@@ -32,11 +32,13 @@
           <div class="route-title"><h2>Rota karşılaştırması</h2><p>Önceki ve yeni plan · kuş uçuşu tahmin</p></div>
           <div class="avatar-wrap"><div class="mimo-avatar" id="mimo-avatar" aria-label="Mimo durumu"></div><div><strong id="mimo-caption">Mimo hazır</strong><small id="mimo-log">Talimat bekleniyor</small></div></div>
         </div>
+        <div class="reset-row"><button class="button secondary" id="reset-plan" type="button">Başa dön</button></div>
         <div class="route-compare">
           <div class="map-card"><div class="map-label"><span class="legend-dot old" aria-hidden="true"></span><span>ÖNCEKİ PLAN</span><b id="old-distance">— km</b></div><svg id="old-map" viewBox="0 0 360 230" role="img" aria-label="Önceki rota haritası"></svg></div>
           <div class="map-card"><div class="map-label"><span class="legend-dot fresh" aria-hidden="true"></span><span>YENİ PLAN</span><b id="new-distance">— km</b></div><svg id="new-map" viewBox="0 0 360 230" role="img" aria-label="Yeni rota haritası"></svg></div>
         </div>
         <div class="result-strip" id="result-strip"><span class="result-icon" aria-hidden="true"></span><span id="result-text">Plan doğrulama sonucu bekleniyor.</span></div>
+        <div class="validation-evidence" id="validation-evidence" aria-live="polite"></div>
         <div class="validation-details" id="validation-details"></div>
         <div class="timeline-control">
           <div class="timeline-head"><label for="time-slider">GÜN İÇİ ZAMAN <strong id="time-label">08:00</strong></label><button class="button secondary" id="play-time" type="button">Oynat</button></div>

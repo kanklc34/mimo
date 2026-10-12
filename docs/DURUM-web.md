@@ -39,3 +39,7 @@ Tam test paketi son koşuda **61 geçti**, 3 OR-Tools SWIG deprecation uyarısı
 - Önceki rota ilk yüklemede baseline planla çizilir; eski rota çizgileri artık kurye renklerini korur.
 - Harita koordinatları iki görünümde ortak ölçek ve 6% kenar payıyla çizilir; Mimo balonu harita içinde tek satır kalır. Değişen duraklar iki haritada aynı belirgin stille, listede okunur durak adları ve kurye renk noktalarıyla gösterilir; saat kaymaları tek satırda açılır.
 - Onay kartı kısıtları 08:00 vardiya başlangıcına göre saatlendirilmiş satırlar halinde gösterir. Ham JSON varsayılan kapalıdır ve “JSON'u düzenle” ile açılır; mevcut düzeltme/onay akışı korunur.
+- `POST /reset`, kısıtsız seed=42 başlangıç planını yeniden üretip önceki plan olarak saklar; loga `sıfırlandı` olayı yazar ve başlangıç kilometresini döner.
+- Rota karşılaştırmasının üstündeki “Başa dön” düğmesi iki haritayı baseline'a alır, kilometreyi gösterir, durak değişim sayısını sıfırlar ve Mimo'yu depoya döndürür.
+- Başa dönme talimatı/kısıt girişlerini temizler, onay durumunu beklemeye alır ve zaman çizgisini 08:00'a getirir; aynı kısıt tekrar onaylandığında baseline'a göre aynı fark oluşur.
+- Kurye değişiklikleri önceki rota zamanı ve etkin kısıtlarla gerekçelendirilir; eşleşen neden yoksa genel yeniden dağıtım açıklaması gösterilir. Karşılaştırma altında validator kontrolleri ve API kaynaklı ihlal sayısı kanıt şeridinde listelenir.

@@ -140,7 +140,7 @@ function drawMap(svg, plan, old = false) {
     }
     const mimoStatus = state.mimoState || "dusunuyor";
     const mimoPoint = mimoTarget(depotPoint);
-    markup += `<g id="mimo-marker" class="mimo-marker" transform="translate(${mimoPoint.x} ${mimoPoint.y})"><rect class="mimo-bubble" x="-90" y="-49" width="180" height="21" style="display:none"/><text id="mimo-bubble-text" x="0" y="-35" text-anchor="middle" textLength="164" lengthAdjust="spacingAndGlyphs"></text><circle class="mimo-marker-body" r="22"/><image class="mimo-map-image${state.assetFailed.has(mimoStatus) ? " failed" : ""}" href="/assets/mimo-${mimoStatus}.png" x="-22" y="-22" width="44" height="44" preserveAspectRatio="xMidYMid meet"/><text class="mimo-marker-face" x="0" y="5" text-anchor="middle">🐒</text></g>`;
+    markup += `<g id="mimo-marker" class="mimo-marker" transform="translate(${mimoPoint.x} ${mimoPoint.y})"><rect class="mimo-bubble" x="-126" y="-58" width="252" height="38" style="display:none"/><text id="mimo-bubble-text" x="0" y="-44" text-anchor="middle"></text><circle class="mimo-marker-body" r="22"/><image class="mimo-map-image${state.assetFailed.has(mimoStatus) ? " failed" : ""}" href="/assets/mimo-${mimoStatus}.png" x="-22" y="-22" width="44" height="44" preserveAspectRatio="xMidYMid meet"/><text class="mimo-marker-face" x="0" y="5" text-anchor="middle">🐒</text></g>`;
     state.mimoPosition = mimoPoint;
   }
   svg.innerHTML = markup;
@@ -159,7 +159,15 @@ function drawMap(svg, plan, old = false) {
 
 function setBubble(text) {
   const fullMessage = String(text || "").trim().replace(/\s+/g, " ");
-  const message = fullMessage.length > 34 ? `${fullMessage.slice(0, 33).trimEnd()}…` : fullMessage;
+  const lines = [];
+  let line = "";
+  for (const word of fullMessage.split(" ")) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (candidate.length > 50 && line) { lines.push(line); line = word; }
+    else line = candidate;
+  }
+  if (line) lines.push(line);
+  const messageLines = lines.slice(0, 2);
   const bubble = $("#mimo-bubble-text");
   const marker = $("#mimo-marker");
   const pointMatch = marker?.getAttribute("transform")?.match(/translate\(([-\d.]+)\s+([-\d.]+)\)/);
@@ -167,18 +175,27 @@ function setBubble(text) {
   const markerY = pointMatch ? Number(pointMatch[2]) : 115;
   const rect = $("#mimo-marker .mimo-bubble");
   if (bubble) {
-    bubble.textContent = message;
-    if (markerX < 102) { bubble.setAttribute("x", "2"); bubble.setAttribute("text-anchor", "start"); }
-    else if (markerX > 258) { bubble.setAttribute("x", "358"); bubble.setAttribute("text-anchor", "end"); }
+    bubble.replaceChildren(...messageLines.map((message, index) => {
+      const tspan = svgNode("tspan", {
+        x: markerX < 132 ? 4 : markerX > 228 ? 356 : markerX,
+        dy: index ? 12 : 0,
+        textLength: Math.min(232, Math.max(120, message.length * 4.6)),
+        lengthAdjust: "spacingAndGlyphs",
+      });
+      tspan.textContent = message;
+      return tspan;
+    }));
+    if (markerX < 132) { bubble.setAttribute("x", "4"); bubble.setAttribute("text-anchor", "start"); }
+    else if (markerX > 228) { bubble.setAttribute("x", "356"); bubble.setAttribute("text-anchor", "end"); }
     else { bubble.setAttribute("x", String(markerX)); bubble.setAttribute("text-anchor", "middle"); }
-    bubble.setAttribute("y", markerY < 55 ? String(markerY + 41) : String(markerY - 35));
+    bubble.setAttribute("y", markerY < 70 ? String(markerY + 46) : String(markerY - 44));
   }
   if (rect) {
-    const anchor = markerX < 102 ? 2 : markerX > 258 ? 178 : markerX - 90;
+    const anchor = markerX < 132 ? 2 : markerX > 228 ? 106 : markerX - 126;
     rect.setAttribute("x", String(anchor));
-    rect.setAttribute("y", markerY < 55 ? String(markerY + 27) : String(markerY - 49));
+    rect.setAttribute("y", markerY < 70 ? String(markerY + 32) : String(markerY - 58));
   }
-  if (rect) rect.style.display = message ? "" : "none";
+  if (rect) rect.style.display = messageLines.length ? "" : "none";
 }
 
 function walkTo(target, duration = 650) {
@@ -222,7 +239,7 @@ function pause(ms, tourId) {
 function changeMessage(change, unservedById) {
   const stop = stopById(change.stop_id);
   const stopName = stopLabel(stop?.id || change.stop_id);
-  if (change.type === "kurye_degisti") return `${stopName}: ${courierName(change.old_courier_id)}'ten ${courierName(change.new_courier_id)}'ye geçti`;
+  if (change.type === "kurye_degisti") return change.reason || `${stopName}: yeniden dağıtımda taşındı`;
   if (change.type === "sira_degisti") return `${stopName}: sırası değişti`;
   if (change.type === "yeni_atlandi") return `${stopName}: atlandı: ${unservedById.get(change.stop_id) || ""}`;
   return "";
@@ -273,10 +290,32 @@ function renderResult(data, { tour = true } = {}) {
   strip.classList.toggle("invalid", !data.summary.valid);
   $(".result-icon").textContent = data.summary.valid ? "✓" : "!";
   $("#result-text").textContent = data.summary.valid
-    ? `Gerçekten değişen ${data.diff.meaningful_change_count} durak · saat kayması ${data.diff.time_only_count} · ${data.violations.length} ihlal · ${data.unserved.length} atlanan durak`
-    : `Doğrulama başarısız · ${data.violations.length} ihlal`;
+    ? `Gerçekten değişen ${data.diff.meaningful_change_count} durak · saat kayması ${data.diff.time_only_count} · ${data.validation_evidence.violation_count} ihlal · ${data.unserved.length} atlanan durak`
+    : `Doğrulama başarısız · ${data.validation_evidence.violation_count} ihlal`;
+  renderValidationEvidence(data.validation_evidence);
   renderChangeDetails(data);
   if (tour) void runTour(data);
+}
+
+function renderValidationEvidence(evidence) {
+  const labels = {
+    known_references: "Kurye ve durak referansları",
+    stop_coverage: "Her durak bir kez atanmış veya atlanmış",
+    valid_arrival: "Varış zamanları geçerli",
+    shift: "Vardiya sınırları",
+    return_to_depot: "Vardiya içinde depoya dönüş",
+    time_windows: "Zaman pencereleri",
+    travel_order: "Seyahat süreleri ve rota sırası",
+    capacity: "Kurye kapasitesi",
+    courier_unavailable_after: "Kurye müsaitlik kısıtı",
+    tag_deadline: "Etiket teslim sınırı",
+    max_stops: "Maksimum durak kısıtı",
+  };
+  const target = $("#validation-evidence");
+  const checks = evidence?.checks || [];
+  target.innerHTML = checks.length
+    ? `<strong>Doğrulama kanıtı · ${Number(evidence.violation_count) || 0} ihlal</strong><ul>${checks.map(check => `<li>${escapeHtml(labels[check] || check)}</li>`).join("")}</ul>`
+    : "";
 }
 
 function renderChangeDetails(data) {
@@ -289,7 +328,8 @@ function renderChangeDetails(data) {
   const courierChange = change => {
     const oldIndex = Math.max(0, state.scenario.couriers.findIndex(courier => courier.id === change.old_courier_id));
     const newIndex = Math.max(0, state.scenario.couriers.findIndex(courier => courier.id === change.new_courier_id));
-    return `${escapeHtml(stopLabel(change.stop_id))} · <span class="change-courier"><i style="--courier-color:${courierColors[oldIndex % courierColors.length]}"></i>${escapeHtml(courierName(change.old_courier_id))}</span> → <span class="change-courier"><i style="--courier-color:${courierColors[newIndex % courierColors.length]}"></i>${escapeHtml(courierName(change.new_courier_id))}</span>`;
+    const reason = change.reason || "Yeniden dağıtımda taşındı";
+    return `${escapeHtml(stopLabel(change.stop_id))} · <span class="change-courier"><i style="--courier-color:${courierColors[oldIndex % courierColors.length]}"></i>${escapeHtml(courierName(change.old_courier_id))}</span> → <span class="change-courier"><i style="--courier-color:${courierColors[newIndex % courierColors.length]}"></i>${escapeHtml(courierName(change.new_courier_id))}</span><small class="change-reason">${escapeHtml(reason)}</small>`;
   };
   for (const change of meaningful) {
     const label = change.type === "kurye_degisti" ? courierChange(change)
@@ -416,6 +456,49 @@ $("#old-map").addEventListener("click", event => {
   if (stop) showStopDetails(stop.dataset.stopId);
 });
 $("#time-slider").addEventListener("input", renderTimelineMarkers);
+$("#reset-plan").addEventListener("click", async () => {
+  const button = $("#reset-plan");
+  button.disabled = true;
+  try {
+    const baseline = await api("/reset", {});
+    state.tourId += 1;
+    if (state.playTimer) clearInterval(state.playTimer);
+    state.playTimer = null;
+    $("#play-time").textContent = "Oynat";
+    state.plan = baseline.plan;
+    state.previous = baseline.plan;
+    state.constraints = { constraints: [] };
+    state.changed.clear();
+    state.timeOnly.clear();
+    $("#old-distance").textContent = `${baseline.distance_km.toFixed(2)} km`;
+    $("#new-distance").textContent = `${baseline.distance_km.toFixed(2)} km`;
+    drawMap($("#old-map"), baseline.plan, true);
+    drawMap($("#new-map"), baseline.plan, false);
+    $("#result-strip").classList.remove("invalid");
+    $("#result-text").textContent = "Başa dönüldü · gerçekten değişen 0 durak · saat kayması 0 · 0 ihlal · 0 atlanan durak";
+    $("#validation-details").innerHTML = "";
+    $("#validation-evidence").innerHTML = "";
+    $("#instruction").value = "";
+    $("#constraints").value = JSON.stringify(state.constraints, null, 2);
+    renderConstraintSummaries(state.constraints);
+    $("#interpret-status").textContent = "BEKLİYOR";
+    $("#interpret-status").className = "status-chip idle";
+    $("#approve").disabled = true;
+    showError($("#interpret-error"), "");
+    showError($("#plan-error"), "");
+    $("#time-slider").value = "0";
+    renderTimelineMarkers();
+    setMimoStatus("dusunuyor");
+    $("#mimo-caption").textContent = captions.dusunuyor[0];
+    setBubble("");
+    await walkTo(state.depotPoint, 0);
+    refreshLog();
+  } catch (error) {
+    showError($("#plan-error"), error.message);
+  } finally {
+    button.disabled = false;
+  }
+});
 $("#play-time").addEventListener("click", () => {
   if (state.playTimer) {
     clearInterval(state.playTimer);

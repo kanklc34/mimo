@@ -11,13 +11,16 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+from api.gemini import PROMPT_SCHEMA_FINGERPRINT
+
+
 DEFAULT_DATASET = ROOT / "tests" / "data" / "gemini_eval.json"
 DEFAULT_CACHE = ROOT / "cache" / "gemini_eval"
 DEFAULT_REPORT = ROOT / "docs" / "olcum-gemini.md"
+PREVIOUS_FAILURE_REPORT = ROOT / "docs" / "olcum-gemini-ilk.md"
 ERROR_TYPES = ("wrong type", "wrong value", "missing constraint", "extra constraint", "schema error")
 
 
@@ -226,9 +229,18 @@ def _read_cache(path: Path, case: dict[str, Any], model: str) -> dict[str, Any] 
         cached = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
-    if cached.get("sentence") != case["text"] or cached.get("model_id") != model:
+    if (cached.get("sentence") != case["text"] or cached.get("model_id") != model
+            or cached.get("prompt_schema_fingerprint") != PROMPT_SCHEMA_FINGERPRINT):
         return None
     return cached
+
+
+def _load_previous_failed_ids(path: Path = PREVIOUS_FAILURE_REPORT) -> set[str]:
+    report = path.read_text(encoding="utf-8")
+    ids = set(re.findall(r"^###\s+([A-Za-z0-9_.-]+)\s+·", report, re.MULTILINE))
+    if not ids:
+        raise SystemExit(f"Hata: {path} içinde önceki hatalı vaka başlıkları bulunamadı.")
+    return ids
 
 
 def _write_cache(path: Path, record: dict[str, Any]) -> None:
@@ -263,6 +275,12 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
     os.chdir(ROOT)
     config, model = _load_gemini_config()
     cases = _load_cases(args.dataset)
+    if getattr(args, "only_failed", False):
+        failed_ids = _load_previous_failed_ids()
+        missing = failed_ids - {case["id"] for case in cases}
+        if missing:
+            raise SystemExit(f"Hata: önceki rapordaki vaka kimlikleri veri kümesinde yok: {', '.join(sorted(missing))}")
+        cases = [case for case in cases if case["id"] in failed_ids]
     recorder = RequestRecorder(args.retry_wait, args.max_retries)
     _install_request_recorder(recorder)
 
@@ -276,14 +294,18 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
     evaluations = []
     api_calls_this_run = 0
     cache_hits = 0
+    previous_network_call = False
 
-    for case in cases:
+    for case_index, case in enumerate(cases, start=1):
+        print(f"[{case_index}/{len(cases)}] {case['id']}", flush=True)
         cache_path = _case_cache_path(args.cache, case["id"])
         record = _read_cache(cache_path, case, model)
         if record is not None:
             cache_hits += 1
             record["calls_this_run"] = 0
         else:
+            if previous_network_call and args.request_delay > 0:
+                time.sleep(args.request_delay)
             recorder.reset()
             try:
                 translated = translator.interpret(case["text"], scenario)
@@ -299,8 +321,7 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
                 )
                 print(f"Gemini hata zinciri ({case['id']}): {safe_chain}", file=sys.stderr)
             api_calls_this_run += recorder.attempts
-            if recorder.attempts and args.request_delay > 0:
-                time.sleep(args.request_delay)
+            previous_network_call = recorder.attempts > 0
             if not recorder.response_received and (error is not None or translated is None):
                 raise SystemExit(
                     f"Hata: {case['id']} için Gemini yanıtı alınamadı. Hata türü: {error or 'yanıt yok'}"
@@ -309,6 +330,7 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
                 "case_id": case["id"],
                 "sentence": case["text"],
                 "model_id": model,
+                "prompt_schema_fingerprint": PROMPT_SCHEMA_FINGERPRINT,
                 "raw_response": recorder.raw_response,
                 "response_received": recorder.response_received,
                 "translated": translated,
@@ -437,9 +459,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
     parser.add_argument("--cache", type=Path, default=DEFAULT_CACHE)
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
-    parser.add_argument("--request-delay", type=float, default=0.5, help="API çağrıları arasındaki kısa bekleme süresi (saniye).")
+    parser.add_argument("--request-delay", type=float, default=3.0, help="API çağrıları arasındaki bekleme süresi (saniye).")
     parser.add_argument("--retry-wait", type=float, default=2.0, help="429 yeniden denemelerinin başlangıç beklemesi (saniye).")
     parser.add_argument("--max-retries", type=int, default=4, help="429 için ek deneme sayısı.")
+    parser.add_argument("--only-failed", action="store_true", help="Yalnızca olcum-gemini-ilk.md raporundaki hatalı vakaları çalıştır.")
     return parser.parse_args()
 
 

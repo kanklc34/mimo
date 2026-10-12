@@ -1,4 +1,3 @@
-import hashlib
 import json
 import sys
 from types import ModuleType, SimpleNamespace
@@ -7,8 +6,43 @@ from tempfile import TemporaryDirectory
 
 import pytest
 
+from api import gemini
 from api.gemini import GeminiTranslator
 from generator import generate_scenario
+
+
+@pytest.mark.parametrize(("clock", "expected"), [
+    ("11:00", 180),
+    ("14:00", 360),
+    ("09:45", 105),
+    ("12:30", 270),
+])
+def test_wall_clock_conversion_uses_0800_shift_start(clock, expected):
+    assert gemini.clock_to_minutes_from_shift_start(clock, shift_start_min=0) == expected
+
+
+def test_relative_minutes_are_preserved_during_time_normalization():
+    raw = {"constraints": {"constraints": [
+        {"type": "tag_deadline", "tag": "soğuk_zincir", "within_minutes_from_start": 120},
+    ]}, "understood_text": "Göreli süre."}
+
+    normalized = GeminiTranslator._normalize_clock_constraints(raw, generate_scenario())
+
+    assert normalized["constraints"]["constraints"][0]["within_minutes_from_start"] == 120
+
+
+def test_clock_fields_are_converted_and_removed_before_constraint_validation():
+    raw = {"constraints": {"constraints": [
+        {"type": "courier_unavailable_after", "courier_id": "courier-1", "time_hhmm": "11:00"},
+        {"type": "tag_deadline", "tag": "soğuk_zincir", "deadline_hhmm": "14:00"},
+    ]}, "understood_text": "Saatli kısıtlar."}
+
+    normalized = GeminiTranslator._normalize_clock_constraints(raw, generate_scenario())
+
+    assert normalized["constraints"]["constraints"] == [
+        {"type": "courier_unavailable_after", "courier_id": "courier-1", "time_min": 180},
+        {"type": "tag_deadline", "tag": "soğuk_zincir", "within_minutes_from_start": 360},
+    ]
 
 
 def test_demo_mode_reads_sentence_cache_without_calling_client(monkeypatch):
@@ -16,7 +50,8 @@ def test_demo_mode_reads_sentence_cache_without_calling_client(monkeypatch):
         cache = Path(temp_dir) / "cache"
         cache.mkdir()
         sentence = "Kurye 1 en fazla 7 durak alsın"
-        digest = hashlib.sha256(sentence.encode("utf-8")).hexdigest()
+        translator = GeminiTranslator(cache_dir=cache)
+        digest = translator._cache_path(sentence).stem
         (cache / f"{digest}.json").write_text(
             json.dumps({
                 "constraints": {"constraints": [{"type": "max_stops", "courier_id": "courier-1", "n": 7}]},
@@ -26,7 +61,6 @@ def test_demo_mode_reads_sentence_cache_without_calling_client(monkeypatch):
         )
         monkeypatch.setenv("GEMINI_DEMO_MODE", "1")
 
-        translator = GeminiTranslator(cache_dir=cache)
         result = translator.interpret(sentence, generate_scenario())
 
         assert result["constraints"]["constraints"][0]["courier_id"] == "courier-1"
@@ -80,7 +114,11 @@ def test_live_translation_uses_mocked_sdk_and_caches_response(monkeypatch):
         assert captured["request"]["model"] == "gemini-test"
         assert config.temperature == 0
         assert config.response_mime_type == "application/json"
-        assert "120 dakika" in config.system_instruction
+        assert "08:00" in config.system_instruction
+        assert "HH:MM" in config.system_instruction
+        schema_item = config.response_schema["properties"]["constraints"]["properties"]["constraints"]["items"]
+        assert "time_hhmm" in schema_item["properties"]
+        assert "deadline_hhmm" in schema_item["properties"]
         assert len(list(Path(temp_dir).glob("*.json"))) == 1
 
 

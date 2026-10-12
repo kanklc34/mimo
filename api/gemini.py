@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 from threading import Lock
 from typing import Any
@@ -11,11 +12,70 @@ from constraints import ConstraintSet
 from models import Scenario
 
 
-SYSTEM_INSTRUCTION = """Türkçe kurye talimatlarını yalnızca aşağıdaki ConstraintSet JSON şemasına çevir.
-Zamanları vardiya başlangıcından itibaren dakika tamsayısı olarak yaz. 'İlk iki saatte' gibi
-göreli süreleri vardiya başlangıcından itibaren dakikaya dönüştür (iki saat = 120 dakika).
+SHIFT_START_CLOCK_MIN = 8 * 60
+
+SYSTEM_INSTRUCTION = """Türkçe kurye talimatlarını yalnızca aşağıdaki JSON şemasına çevir.
+Vardiya başlangıcı 08:00'dır. Saat olarak verilen sınırları aritmetik yapmadan, HH:MM
+biçiminde `time_hhmm` (kurye müsaitliği) veya `deadline_hhmm` (etiket teslim sınırı)
+alanına yaz. Saat ile belirtilmeyen göreli süreleri doğrudan `time_min` veya
+`within_minutes_from_start` alanına vardiya başlangıcından itibaren dakika olarak yaz.
+Saat sınırını dakika alanlarına yazma ve vardiya başlangıcını tahmin etme. Saat nokta ile
+yazılmışsa HH:MM biçimine normalleştir; yalnızca saat belirtilmişse dakikayı 00 kabul et.
 Kurye ve etiket adlarını yalnızca verilen senaryo listesinden seç. Anlamı kesin çıkaramıyorsan
 constraints boş bırak ve anlaşılmadığını belirt. Başka alan veya açıklama üretme."""
+
+RESPONSE_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "constraints": {
+            "type": "OBJECT",
+            "properties": {
+                "constraints": {
+                    "type": "ARRAY",
+                    "items": {
+                        "type": "OBJECT",
+                        "properties": {
+                            "type": {"type": "STRING", "enum": [
+                                "courier_unavailable_after", "tag_deadline", "max_stops"
+                            ]},
+                            "courier_id": {"type": "STRING"},
+                            "time_min": {"type": "INTEGER"},
+                            "time_hhmm": {"type": "STRING"},
+                            "tag": {"type": "STRING"},
+                            "within_minutes_from_start": {"type": "INTEGER"},
+                            "deadline_hhmm": {"type": "STRING"},
+                            "n": {"type": "INTEGER"},
+                        },
+                        "required": ["type"],
+                    },
+                }
+            },
+            "required": ["constraints"],
+        },
+        "understood_text": {"type": "STRING"},
+    },
+    "required": ["constraints", "understood_text"],
+}
+
+PROMPT_SCHEMA_FINGERPRINT = hashlib.sha256(json.dumps({
+    "system_instruction": SYSTEM_INSTRUCTION,
+    "response_schema": RESPONSE_SCHEMA,
+    "clock_normalization": "08:00-wall-clock-v1",
+}, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def clock_to_minutes_from_shift_start(clock: str, *, shift_start_min: int = 0) -> int:
+    """Convert a wall-clock HH:MM value to minutes since the 08:00 shift start."""
+    match = re.fullmatch(r"(\d{1,2}):(\d{2})", clock.strip())
+    if not match:
+        raise ValueError(f"Saat HH:MM biçiminde olmalı: {clock!r}")
+    hours, minutes = map(int, match.groups())
+    if hours > 23 or minutes > 59:
+        raise ValueError(f"Geçersiz saat: {clock!r}")
+    result = hours * 60 + minutes - (SHIFT_START_CLOCK_MIN + shift_start_min)
+    if result < 0:
+        raise ValueError(f"Saat vardiya başlangıcından önce: {clock!r}")
+    return result
 
 
 class GeminiTranslator:
@@ -38,7 +98,11 @@ class GeminiTranslator:
         return values
 
     def _cache_path(self, sentence: str) -> Path:
-        digest = hashlib.sha256(sentence.strip().encode("utf-8")).hexdigest()
+        key = json.dumps({
+            "sentence": sentence.strip(),
+            "prompt_schema_fingerprint": PROMPT_SCHEMA_FINGERPRINT,
+        }, ensure_ascii=False, sort_keys=True)
+        digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
         return self.cache_dir / f"{digest}.json"
 
     def interpret(self, sentence: str, scenario: Scenario) -> dict[str, Any]:
@@ -81,36 +145,7 @@ class GeminiTranslator:
                 system_instruction=SYSTEM_INSTRUCTION,
                 temperature=0,
                 response_mime_type="application/json",
-                response_schema={
-                    "type": "OBJECT",
-                    "properties": {
-                        "constraints": {
-                            "type": "OBJECT",
-                            "properties": {
-                                "constraints": {
-                                    "type": "ARRAY",
-                                    "items": {
-                                        "type": "OBJECT",
-                                        "properties": {
-                                            "type": {"type": "STRING", "enum": [
-                                                "courier_unavailable_after", "tag_deadline", "max_stops"
-                                            ]},
-                                            "courier_id": {"type": "STRING"},
-                                            "time_min": {"type": "INTEGER"},
-                                            "tag": {"type": "STRING"},
-                                            "within_minutes_from_start": {"type": "INTEGER"},
-                                            "n": {"type": "INTEGER"},
-                                        },
-                                        "required": ["type"],
-                                    },
-                                }
-                            },
-                            "required": ["constraints"],
-                        },
-                        "understood_text": {"type": "STRING"},
-                    },
-                    "required": ["constraints", "understood_text"],
-                },
+                response_schema=RESPONSE_SCHEMA,
             ),
         )
         try:
@@ -123,8 +158,35 @@ class GeminiTranslator:
 
     @staticmethod
     def _validate(raw: dict[str, Any], scenario: Scenario) -> dict[str, Any]:
+        raw = GeminiTranslator._normalize_clock_constraints(raw, scenario)
         constraints = ConstraintSet.model_validate(raw.get("constraints", {}), context={"scenario": scenario})
         understood_text = raw.get("understood_text")
         if not isinstance(understood_text, str) or not understood_text.strip():
             raise ValueError("Gemini yanıtında anlaşılır özet yok.")
         return {"constraints": constraints.model_dump(mode="json"), "understood_text": understood_text}
+
+    @staticmethod
+    def _normalize_clock_constraints(raw: dict[str, Any], scenario: Scenario) -> dict[str, Any]:
+        normalized = dict(raw)
+        constraint_payload = dict(raw.get("constraints", {}))
+        constraints = constraint_payload.get("constraints", [])
+        normalized_constraints = []
+        for source in constraints:
+            constraint = dict(source)
+            kind = constraint.get("type")
+            if kind == "courier_unavailable_after" and "time_hhmm" in constraint:
+                courier = scenario.courier_by_id.get(constraint.get("courier_id"))
+                if courier is None:
+                    raise ValueError("Saat dönüşümü için kurye senaryoda bulunamadı.")
+                constraint["time_min"] = clock_to_minutes_from_shift_start(
+                    constraint.pop("time_hhmm"), shift_start_min=courier.shift_start,
+                )
+            elif kind == "tag_deadline" and "deadline_hhmm" in constraint:
+                shift_start = min((courier.shift_start for courier in scenario.couriers), default=0)
+                constraint["within_minutes_from_start"] = clock_to_minutes_from_shift_start(
+                    constraint.pop("deadline_hhmm"), shift_start_min=shift_start,
+                )
+            normalized_constraints.append(constraint)
+        constraint_payload["constraints"] = normalized_constraints
+        normalized["constraints"] = constraint_payload
+        return normalized
