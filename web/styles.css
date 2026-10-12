@@ -61,7 +61,7 @@ h1 { margin-bottom: 0; font-size: 28px; line-height: 1.2; letter-spacing: -.035e
 .shift-pill small, .shift-pill strong { display: block; }
 .shift-pill small { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .06em; }
 .shift-pill strong { font-size: 16px; }
-.workspace { display: grid; grid-template-columns: minmax(0, 1fr) clamp(400px, 31vw, 550px); gap: 16px; align-items: stretch; min-height: min(690px, calc(100vh - 190px)); }
+.workspace { display: grid; grid-template-columns: minmax(0, 1fr) clamp(280px, 24vw, 360px); gap: 16px; align-items: stretch; min-height: min(690px, calc(100vh - 190px)); }
 .panel { min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: 0 6px 24px #193b2710; }
 .route-panel { display: flex; flex-direction: column; padding: 18px; }
 .panel-head { display: flex; align-items: center; gap: 12px; min-height: 42px; margin-bottom: 12px; }
@@ -146,6 +146,38 @@ h1 { margin-bottom: 0; font-size: 28px; line-height: 1.2; letter-spacing: -.035e
 .legend-dot.changed { background: var(--courier-3); }
 .legend-dot.muted { background: var(--ink); }
 .workflow-panel { min-width: 0; display: grid; grid-template-rows: minmax(0, .9fr) minmax(0, 1.1fr); align-content: stretch; gap: 0; padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: 0 6px 24px #193b2710; }
+.dashboard-side { min-width: 0; }
+.dashboard-card { position: sticky; top: 16px; padding: 20px; }
+.dashboard-card h2 { margin: 0 0 18px; font-size: 20px; }
+.dashboard-metrics { display: grid; grid-template-columns: repeat(3, 1fr); padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.dashboard-metrics div { display: flex; flex-direction: column; gap: 2px; }
+.dashboard-metrics strong { font-size: 21px; letter-spacing: -.03em; }
+.dashboard-metrics span { color: var(--muted); font-size: 12px; }
+.dashboard-status { display: flex; align-items: center; gap: 10px; margin: 17px 0; }
+.dashboard-status strong, .dashboard-status small { display: block; }
+.dashboard-status strong { font-size: 14px; }
+.dashboard-status small { margin-top: 2px; color: var(--muted); font-size: 12px; }
+.status-dot { width: 10px; height: 10px; flex: 0 0 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px #147a5518; }
+.dashboard-cta { justify-content: space-between; }
+.dashboard-reset { width: 100%; margin-top: 8px; }
+.workflow-steps { display: flex; align-items: center; gap: 7px; margin-top: 22px; color: var(--accent); font-size: 11px; white-space: nowrap; }
+.workflow-steps span { display: flex; align-items: center; gap: 4px; }
+.workflow-steps span > :first-child { display: grid; }
+.workflow-steps span { font-weight: 700; }
+.workflow-steps b { color: var(--muted); font-weight: 600; }
+.workflow-steps i { height: 1px; flex: 1; background: var(--line); }
+.dashboard-note { margin: 12px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.workflow-dialog { width: min(700px, calc(100vw - 32px)); max-width: none; max-height: calc(100vh - 32px); padding: 0; overflow: auto; border: 1px solid var(--line); border-radius: 18px; background: var(--canvas); color: var(--ink); box-shadow: 0 24px 90px #15241d55; }
+.workflow-dialog::backdrop { background: #14221dcc; backdrop-filter: blur(3px); }
+.workflow-shell { padding: 20px; }
+.workflow-dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.workflow-dialog-head h2 { margin: 0; font-size: 23px; }
+.workflow-dialog-head .button { width: 38px; min-height: 38px; padding: 4px; font-size: 21px; }
+.workflow-dialog .workflow-panel { display: block; padding: 18px; }
+.workflow-dialog .workflow-panel .panel { padding: 0; border: 0; box-shadow: none; }
+.workflow-dialog .instruction-panel { padding: 0 !important; border: 0 !important; }
+.workflow-dialog .constraints-panel { padding: 0 !important; }
+.workflow-dialog .constraints-panel[hidden], .workflow-dialog .instruction-panel[hidden] { display: none; }
 .workflow-panel .panel { min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .instruction-panel, .constraints-panel { display: flex; flex-direction: column; overflow: auto; }
 .instruction-panel { padding-bottom: 18px !important; border-bottom: 1px solid var(--line) !important; }

@@ -284,6 +284,13 @@ function renderResult(data, { tour = true } = {}) {
   state.timeOnly = new Set(changes.filter(change => change.type === "sadece_saat_kaydi").map(change => change.stop_id));
   $("#old-distance").textContent = data.diff?.previous_distance_km == null ? "— km" : `${data.diff.previous_distance_km.toFixed(2)} km`;
   $("#new-distance").textContent = `${data.summary.distance_km.toFixed(2)} km`;
+  $("#dashboard-stops").textContent = String(state.scenario?.stops.length || 0);
+  $("#dashboard-couriers").textContent = String(state.scenario?.couriers.length || 0);
+  $("#dashboard-distance").textContent = data.summary.distance_km.toFixed(1);
+  $("#dashboard-status").textContent = data.summary.valid ? "Plan doğrulandı" : "Kontrol gerekiyor";
+  $("#dashboard-substatus").textContent = data.summary.valid
+    ? `${data.diff?.meaningful_change_count || 0} durak yeniden atandı · ${data.validation_evidence.violation_count} ihlal`
+    : `${data.validation_evidence.violation_count} kural ihlali`;
   drawMap($("#old-map"), state.previous, true);
   drawMap($("#new-map"), state.plan, false);
   renderOverviewMap("new");
@@ -294,6 +301,8 @@ function renderResult(data, { tour = true } = {}) {
     ? `Gerçekten değişen ${data.diff.meaningful_change_count} durak · saat kayması ${data.diff.time_only_count} · ${data.validation_evidence.violation_count} ihlal · ${data.unserved.length} atlanan durak`
     : `Doğrulama başarısız · ${data.validation_evidence.violation_count} ihlal`;
   renderValidationEvidence(data.validation_evidence);
+  $("#validation-evidence").hidden = !tour;
+  $(".changes-details").hidden = !tour;
   renderChangeDetails(data);
   if (tour) void runTour(data);
 }
@@ -567,6 +576,20 @@ document.querySelectorAll("[data-overview-map]").forEach(button => button.addEve
 }));
 document.querySelectorAll("[data-detail-map]").forEach(button => button.addEventListener("click", () => renderRouteDetail(button.dataset.detailMap)));
 $("#close-route-detail").addEventListener("click", () => $("#route-detail-dialog").close());
+$("#start-workflow").addEventListener("click", () => {
+  $("#instruction").value = "";
+  $(".constraints-panel").hidden = true;
+  $(".instruction-panel").hidden = false;
+  $("#workflow-title").textContent = "Operasyon talimatı";
+  showError($("#interpret-error"), "");
+  showError($("#plan-error"), "");
+  $("#workflow-dialog").showModal();
+  $("#instruction").focus();
+});
+$("#close-workflow").addEventListener("click", () => $("#workflow-dialog").close());
+$("#workflow-dialog").addEventListener("click", event => {
+  if (event.target === $("#workflow-dialog")) $("#workflow-dialog").close();
+});
 $("#route-detail-dialog").addEventListener("click", event => {
   if (event.target === $("#route-detail-dialog")) $("#route-detail-dialog").close();
   const stop = event.target.closest?.("[data-stop-id]");
@@ -603,6 +626,11 @@ $("#reset-plan").addEventListener("click", async () => {
     state.timeOnly.clear();
     $("#old-distance").textContent = `${baseline.distance_km.toFixed(2)} km`;
     $("#new-distance").textContent = `${baseline.distance_km.toFixed(2)} km`;
+    $("#dashboard-stops").textContent = String(state.scenario?.stops.length || 0);
+    $("#dashboard-couriers").textContent = String(state.scenario?.couriers.length || 0);
+    $("#dashboard-distance").textContent = baseline.distance_km.toFixed(1);
+    $("#dashboard-status").textContent = "Plan hazır";
+    $("#dashboard-substatus").textContent = "Değişiklik bekleniyor";
     drawMap($("#old-map"), baseline.plan, true);
     drawMap($("#new-map"), baseline.plan, false);
     renderOverviewMap("new");
@@ -667,6 +695,11 @@ $("#interpret").addEventListener("click", async () => {
     renderConstraintSummaries(result.constraints);
     if (!result.ok) $("#understood").textContent = result.understood_text || result.message;
     $("#approve").disabled = !result.ok;
+    if (result.ok) {
+      $(".instruction-panel").hidden = true;
+      $(".constraints-panel").hidden = false;
+      $("#workflow-title").textContent = "Kuralları gözden geçir";
+    }
     if (!result.ok) showError($("#interpret-error"), result.message);
     refreshLog();
   } catch (error) { showError($("#interpret-error"), error.message); }
@@ -737,6 +770,7 @@ $("#approve").addEventListener("click", async () => {
     const data = await api("/plan", { constraints: state.constraints });
     renderResult(data);
     refreshLog();
+    $("#workflow-dialog").close();
   } catch (error) { showError($("#plan-error"), error.message); refreshLog(); }
   finally { $("#approve").disabled = false; }
 });

@@ -35,3 +35,12 @@ def test_constraint_editing_uses_plain_language_form_controls_not_json():
     assert 'id="add-constraint"' in html
     assert 'id="constraints"' not in html
     assert 'JSON\'u düzenle' not in html
+
+
+def test_dashboard_opens_a_guided_workflow_instead_of_showing_everything():
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+
+    assert 'id="start-workflow"' in html
+    assert 'id="workflow-dialog"' in html
+    assert 'class="panel constraints-panel" hidden' in html
+    assert 'class="dashboard-side"' in html

@@ -41,7 +41,7 @@
           <div class="map-card" id="new-map-card"><div class="map-label"><span class="legend-dot fresh" aria-hidden="true"></span><span>YENİ PLAN</span></div><svg id="new-map" viewBox="0 0 360 230" role="img" aria-label="Yeni rota haritası"></svg></div>
         </div>
         <div class="result-strip" id="result-strip"><span class="result-icon" aria-hidden="true"></span><span id="result-text">Plan doğrulama sonucu bekleniyor.</span></div>
-        <div class="validation-evidence" id="validation-evidence" aria-live="polite"></div>
+        <div class="validation-evidence" id="validation-evidence" aria-live="polite" hidden></div>
         <details class="changes-details" hidden><summary>Değişiklik ayrıntılarını gör</summary><div class="validation-details" id="validation-details"></div></details>
         <details class="timeline-details">
         <summary>Gün içi kurye hareketlerini göster</summary>
@@ -54,7 +54,22 @@
         <div class="map-foot"><span><i class="legend-dot fresh" aria-hidden="true"></i> Aktif rota</span><span><i class="legend-dot changed" aria-hidden="true"></i> Değişen durak</span><span><i class="legend-dot muted" aria-hidden="true"></i> Depo</span></div>
       </article>
 
-      <aside class="workflow-panel" aria-label="Planlama adımları">
+      <aside class="dashboard-side" aria-label="Gün özeti">
+        <article class="panel dashboard-card">
+          <p class="eyebrow">BUGÜNÜN ÖZETİ</p><h2>Dağıtım planı</h2>
+          <div class="dashboard-metrics"><div><strong id="dashboard-stops">50</strong><span>durak</span></div><div><strong id="dashboard-couriers">4</strong><span>kurye</span></div><div><strong id="dashboard-distance">—</strong><span>toplam km</span></div></div>
+          <div class="dashboard-status"><span class="status-dot"></span><div><strong id="dashboard-status">Plan hazır</strong><small id="dashboard-substatus">Değişiklik bekleniyor</small></div></div>
+          <button class="button primary dashboard-cta" id="start-workflow" type="button">Planı güncelle <span aria-hidden="true">→</span></button>
+          <button class="button secondary dashboard-reset" id="reset-plan" type="button">Gün planını sıfırla</button>
+          <div class="workflow-steps"><span>1 <b>Talimat</b></span><i></i><span>2 <b>Onay</b></span><i></i><span>3 <b>Doğrulama</b></span></div>
+          <p class="dashboard-note">Bir kurye devre dışı kaldığında planı birkaç adımda güncelleyin.</p>
+        </article>
+      </aside>
+    </section>
+    <dialog class="workflow-dialog" id="workflow-dialog" aria-modal="true" aria-labelledby="workflow-title">
+      <div class="workflow-shell">
+        <header class="workflow-dialog-head"><div><p class="eyebrow">PLAN GÜNCELLEME</p><h2 id="workflow-title">Operasyon talimatı</h2></div><button class="button secondary" id="close-workflow" type="button" aria-label="Kapat">×</button></header>
+        <div class="workflow-panel" aria-label="Planlama adımları">
         <article class="panel instruction-panel">
           <div class="panel-head"><span class="step-num">01</span><div><h2>Talimat</h2><p>Değişikliği ve sınırları yazın.</p></div></div>
           <label class="field-label" for="instruction">OPERASYON TALİMATI</label>
@@ -65,7 +80,7 @@
           <div class="privacy-note"><span>Talimatlar sunucuda işlenir. API anahtarı tarayıcıya gönderilmez.</span></div>
         </article>
 
-        <article class="panel constraints-panel">
+        <article class="panel constraints-panel" hidden>
           <div class="panel-head"><span class="step-num">02</span><div><h2>Onay ve kısıtlar</h2><p>Sonucu kontrol edin, gerekirse düzenleyin.</p></div><span id="interpret-status" class="status-chip idle">BEKLİYOR</span></div>
           <div class="understood" id="understood">Anlaşılan kısıtlar burada görüntülenir.</div>
           <div class="rule-list" id="constraint-list" aria-label="Düzenlenebilir planlama kuralları"></div>
@@ -73,8 +88,9 @@
           <div class="button-row"><button class="button approve" id="approve" disabled>Onayla ve planla</button></div>
           <p class="error-text" id="plan-error" role="status"></p>
         </article>
-      </aside>
-    </section>
+        </div>
+      </div>
+    </dialog>
     <dialog class="route-detail-dialog" id="route-detail-dialog" aria-modal="true" aria-labelledby="detail-title">
       <div class="detail-shell">
         <header class="detail-header">
