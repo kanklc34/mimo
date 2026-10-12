@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f3f5f3">
   <title>Mimo Kurye · Operasyon</title>
-  <link rel="stylesheet" href="/styles.css?v=dashboard-20261012-6">
+  <link rel="stylesheet" href="/styles.css?v=dashboard-20261012-7">
 </head>
 <body>
   <header class="topbar">
@@ -83,7 +83,11 @@
           <div class="panel-head"><span class="step-num">02</span><div><h2>Onay ve kısıtlar</h2><p>Sonucu kontrol edin, gerekirse düzenleyin.</p></div><span id="interpret-status" class="status-chip idle">BEKLİYOR</span></div>
           <div class="understood" id="understood">Anlaşılan kısıtlar burada görüntülenir.</div>
           <div class="rule-list" id="constraint-list" aria-label="Düzenlenebilir planlama kuralları"></div>
-          <div class="rule-add-row"><label class="field-label" for="add-constraint-type">KURAL EKLE</label><div class="rule-add-controls"><select id="add-constraint-type"><option value="">Bir kural seçin</option><option value="courier_unavailable_after">Kurye çalışma bitişi</option><option value="tag_deadline">Etiketli paket teslim saati</option><option value="max_stops">Kurye durak üst sınırı</option></select><button class="button secondary" id="add-constraint" type="button" disabled>Ekle</button></div></div>
+          <div class="rule-add-row"><span class="field-label">KURAL EKLE</span><div class="rule-picker" role="group" aria-label="Eklenecek kuralı seçin">
+            <button class="rule-choice" type="button" data-rule-type="courier_unavailable_after"><span class="rule-choice-icon">◷</span><span><strong>Kurye çalışma bitişi</strong><small>Bir kuryenin son çalışma saatini belirle.</small></span><span class="rule-choice-plus">+</span></button>
+            <button class="rule-choice" type="button" data-rule-type="tag_deadline"><span class="rule-choice-icon">◈</span><span><strong>Etiketli paket teslim saati</strong><small>Etiketli paketler için teslim sınırı ekle.</small></span><span class="rule-choice-plus">+</span></button>
+            <button class="rule-choice" type="button" data-rule-type="max_stops"><span class="rule-choice-icon">≡</span><span><strong>Kurye durak üst sınırı</strong><small>Bir kuryeye atanabilecek durak sayısını sınırla.</small></span><span class="rule-choice-plus">+</span></button>
+          </div></div>
           <div class="button-row"><button class="button approve" id="approve" disabled>Onayla ve planla</button></div>
           <p class="error-text" id="plan-error" role="status"></p>
         </article>
@@ -108,6 +112,6 @@
     </dialog>
     <footer><span>MIMO KURYE · ROTA OPERASYONU</span><span>Mesafeler yol ve trafik verisi içermez.</span></footer>
   </main>
-  <script src="/app.js?v=dashboard-20261012-6"></script>
+  <script src="/app.js?v=dashboard-20261012-7"></script>
 </body>
 </html>

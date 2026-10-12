@@ -31,8 +31,8 @@ def test_constraint_editing_uses_plain_language_form_controls_not_json():
     html = (WEB / "index.html").read_text(encoding="utf-8")
 
     assert 'id="constraint-list"' in html
-    assert 'id="add-constraint-type"' in html
-    assert 'id="add-constraint"' in html
+    assert 'class="rule-picker"' in html
+    assert 'data-rule-type="courier_unavailable_after"' in html
     assert 'id="constraints"' not in html
     assert 'JSON\'u düzenle' not in html
 
@@ -100,3 +100,18 @@ def test_stop_tooltip_closes_when_clicking_elsewhere():
     script = (WEB / "app.js").read_text(encoding="utf-8")
 
     assert 'document.addEventListener("click", closeStopTooltipOnOutsideClick)' in script
+
+
+def test_map_expansion_requires_explicit_inspect_button():
+    script = (WEB / "app.js").read_text(encoding="utf-8")
+
+    assert 'openRouteDetail(which, $' not in script
+    assert 'openRouteDetail(button.dataset.routeMap, button)' in script
+
+
+def test_rule_picker_uses_designed_choice_cards():
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+
+    assert 'class="rule-picker"' in html
+    assert 'data-rule-type="courier_unavailable_after"' in html
+    assert 'id="add-constraint-type"' not in html

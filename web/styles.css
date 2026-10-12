@@ -223,11 +223,16 @@ textarea::placeholder { color: var(--muted); opacity: 1; }
 .rule-remove:hover, .rule-remove:focus-visible { background: #f7e9e7; color: var(--violation); }
 .rule-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .rule-field { min-width: 0; display: grid; gap: 4px; color: var(--muted); font-size: 12px; font-weight: 600; }
-.rule-field select, .rule-field input, .rule-add-controls select { width: 100%; min-height: 36px; padding: 6px 8px; border: 1px solid #cbd5ce; border-radius: 8px; background: white; color: var(--ink); font: inherit; font-size: 14px; }
+.rule-field select, .rule-field input { width: 100%; min-height: 36px; padding: 6px 8px; border: 1px solid #cbd5ce; border-radius: 8px; background: white; color: var(--ink); font: inherit; font-size: 14px; }
 .rule-add-row { margin-top: 12px; }
-.rule-add-controls { display: flex; gap: 8px; }
-.rule-add-controls select { flex: 1; min-width: 0; }
-.rule-add-controls .button { min-height: 36px; }
+.rule-picker { display: grid; gap: 6px; }
+.rule-choice { width: 100%; min-height: 48px; display: grid; grid-template-columns: 30px minmax(0, 1fr) 24px; align-items: center; gap: 9px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); text-align: left; cursor: pointer; }
+.rule-choice:hover, .rule-choice:focus-visible { border-color: var(--accent); background: var(--soft); outline: none; }
+.rule-choice-icon { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; background: var(--soft); color: var(--accent); font-size: 17px; font-weight: 700; }
+.rule-choice strong, .rule-choice small { display: block; }
+.rule-choice strong { font-size: 13px; }
+.rule-choice small { margin-top: 1px; color: var(--muted); font-size: 11px; }
+.rule-choice-plus { color: var(--accent); font-size: 20px; font-weight: 500; text-align: center; }
 .button-row { display: flex; gap: 8px; margin-top: auto; }
 .time-only-change { color: var(--muted); opacity: .75; }
 .change-list { border-top: 1px solid var(--line); padding-top: 5px; }

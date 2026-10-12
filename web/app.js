@@ -636,10 +636,6 @@ document.querySelectorAll("[data-route-map]").forEach(button => button.addEventL
 document.querySelectorAll("[data-overview-map]").forEach(button => button.addEventListener("click", () => {
   renderOverviewMap(button.dataset.overviewMap);
 }));
-[["#old-map", "old"], ["#new-map", "new"]].forEach(([selector, which]) => $(selector).addEventListener("click", event => {
-  if (event.target.closest?.("[data-stop-id]")) return;
-  openRouteDetail(which, $(`[data-route-map="${which}"]`));
-}));
 document.querySelectorAll("[data-detail-map]").forEach(button => button.addEventListener("click", () => renderRouteDetail(button.dataset.detailMap)));
 $("#close-route-detail").addEventListener("click", () => $("#route-detail-dialog").close());
 $("#start-workflow").addEventListener("click", () => {
@@ -708,8 +704,6 @@ $("#reset-plan").addEventListener("click", async () => {
     $("#validation-details").parentElement.hidden = true;
     $("#validation-evidence").innerHTML = "";
     $("#instruction").value = "";
-    $("#add-constraint-type").value = "";
-    $("#add-constraint").disabled = true;
     renderConstraintSummaries(state.constraints);
     $("#interpret-status").textContent = "BEKLİYOR";
     $("#interpret-status").className = "status-chip idle";
@@ -774,13 +768,8 @@ $("#interpret").addEventListener("click", async () => {
   finally { $("#interpret").disabled = false; }
 });
 
-$("#add-constraint-type").addEventListener("change", event => {
-  $("#add-constraint").disabled = !event.target.value;
-});
-$("#add-constraint").addEventListener("click", () => {
-  const type = $("#add-constraint-type").value;
+function addConstraint(type) {
   const courierId = state.scenario?.couriers[0]?.id;
-  if (!type) return;
   let rule;
   if (type === "courier_unavailable_after" && courierId) rule = { type, courier_id: courierId, time_min: 180 };
   if (type === "tag_deadline") {
@@ -791,13 +780,15 @@ $("#add-constraint").addEventListener("click", () => {
   if (!rule) { showError($("#plan-error"), "Bu kural için senaryoda uygun kurye veya etiket yok."); return; }
   state.constraints.constraints.push(rule);
   renderConstraintSummaries(state.constraints);
-  $("#add-constraint-type").value = "";
-  $("#add-constraint").disabled = true;
   $("#approve").disabled = false;
   $("#interpret-status").textContent = "DÜZENLENDİ";
   $("#interpret-status").className = "status-chip ok";
   showError($("#plan-error"), "");
-});
+  $("#constraint-list").scrollTop = $("#constraint-list").scrollHeight;
+}
+document.querySelectorAll("[data-rule-type]").forEach(button => button.addEventListener("click", () => {
+  addConstraint(button.dataset.ruleType);
+}));
 $("#constraint-list").addEventListener("change", event => {
   const row = event.target.closest("[data-rule-index]");
   const field = event.target.dataset.field;
