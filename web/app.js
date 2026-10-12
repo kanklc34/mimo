@@ -288,10 +288,15 @@ function renderResult(data, { tour = true } = {}) {
   $("#dashboard-stops").textContent = String(state.scenario?.stops.length || 0);
   $("#dashboard-couriers").textContent = String(state.scenario?.couriers.length || 0);
   $("#dashboard-distance").textContent = data.summary.distance_km.toFixed(1);
-  $("#dashboard-status").textContent = data.summary.valid ? "Plan doğrulandı" : "Kontrol gerekiyor";
-  $("#dashboard-substatus").textContent = data.summary.valid
-    ? `${data.diff?.meaningful_change_count || 0} durak yeniden atandı · ${data.validation_evidence.violation_count} ihlal`
-    : `${data.validation_evidence.violation_count} kural ihlali`;
+  const unavailableRule = (state.constraints.constraints || []).find(rule => rule.type === "courier_unavailable_after");
+  const transferred = unavailableRule ? transferredStopCount(unavailableRule.courier_id) : 0;
+  $("#dashboard-status").textContent = data.summary.valid && unavailableRule
+    ? "Devir planlandı ve doğrulandı" : data.summary.valid ? "Plan doğrulandı" : "Kontrol gerekiyor";
+  $("#dashboard-substatus").textContent = !data.summary.valid
+    ? `${data.validation_evidence.violation_count} kural ihlali`
+    : unavailableRule
+      ? `${courierName(unavailableRule.courier_id)} · ${formatClock(unavailableRule.time_min)} sonrası devre dışı · ${transferred} durak aktarıldı`
+      : `${data.diff?.meaningful_change_count || 0} durak yeniden atandı · ${data.validation_evidence.violation_count} ihlal`;
   drawMap($("#old-map"), state.previous, true);
   drawMap($("#new-map"), state.plan, false);
   renderOverviewMap("new");
@@ -361,12 +366,19 @@ function matchingConstraints(stop, courierId) {
     (rule.type !== "tag_deadline" && courierId && rule.courier_id === courierId));
 }
 
-function visitForStop(stopId) {
-  for (const [courierId, visits] of Object.entries(state.plan?.routes || {})) {
+function visitForStop(stopId, plan = state.plan) {
+  for (const [courierId, visits] of Object.entries(plan?.routes || {})) {
     const visit = visits.find(item => item.stop_id === stopId);
     if (visit) return { courierId, visit };
   }
   return null;
+}
+
+function transferredStopCount(courierId) {
+  const oldVisits = state.previous?.routes?.[courierId] || [];
+  const assignedTo = new Map(Object.entries(state.plan?.routes || {})
+    .flatMap(([currentCourierId, visits]) => visits.map(visit => [visit.stop_id, currentCourierId])));
+  return oldVisits.filter(visit => assignedTo.has(visit.stop_id) && assignedTo.get(visit.stop_id) !== courierId).length;
 }
 
 function constraintSummary(rule) {
@@ -478,8 +490,36 @@ function renderRouteDetail(which = state.detailMap) {
   $("#detail-routes").innerHTML = state.scenario.couriers.map((courier, index) => {
     const visits = routes[courier.id] || [];
     const stops = visits.map(visit => stopLabel(visit.stop_id)).join(" · ");
-    return `<section class="detail-route"><div class="detail-route-head"><i style="--courier-color:${courierColors[index % courierColors.length]}"></i><strong>${escapeHtml(courier.name)}</strong><span>${visits.length} durak</span></div><p>${escapeHtml(stops || "Atanmış durak yok")}</p></section>`;
+    const unavailable = !isOld && (state.constraints.constraints || []).find(rule => rule.type === "courier_unavailable_after" && rule.courier_id === courier.id);
+    const transferred = transferredStopCount(courier.id);
+    const status = unavailable ? `<span class="courier-unavailable-badge">Devre dışı · ${formatClock(unavailable.time_min)} sonrası</span>` : "";
+    const transfer = unavailable && state.hasComparison ? `<small class="courier-transfer">${transferred} durak aktarıldı</small>` : "";
+    return `<section class="detail-route ${unavailable ? "courier-unavailable" : ""}"><div class="detail-route-head"><i style="--courier-color:${courierColors[index % courierColors.length]}"></i><strong>${escapeHtml(courier.name)}</strong><span>${visits.length} durak</span></div>${status}${transfer}<p>${escapeHtml(stops || "Atanmış durak yok")}</p></section>`;
   }).join("");
+}
+
+function showStopTooltip(stopCircle, title, detail) {
+  const svg = stopCircle.ownerSVGElement;
+  svg.querySelector(".map-stop-tooltip")?.remove();
+  svg.querySelectorAll(".detail-selected-stop").forEach(item => item.classList.remove("detail-selected-stop"));
+  stopCircle.classList.add("detail-selected-stop");
+  const cx = Number(stopCircle.getAttribute("cx"));
+  const cy = Number(stopCircle.getAttribute("cy"));
+  const bounds = svg.viewBox.baseVal;
+  const width = 156, height = 46;
+  const x = Math.max(bounds.x + 5, Math.min(bounds.x + bounds.width - width - 5, cx - width / 2));
+  const above = cy - height - 10 >= bounds.y + 5;
+  const y = above ? cy - height - 10 : Math.min(bounds.y + bounds.height - height - 8, cy + 10);
+  const anchor = Math.max(13, Math.min(width - 13, cx - x));
+  const group = svgNode("g", { class: "map-stop-tooltip", role: "tooltip", transform: `translate(${x} ${y})` });
+  group.append(svgNode("rect", { x: 0, y: 0, width, height, rx: 8 }));
+  group.append(svgNode("path", { d: above ? `M ${anchor - 8} ${height} L ${anchor} ${height + 8} L ${anchor + 8} ${height} Z` : `M ${anchor - 8} 0 L ${anchor} -8 L ${anchor + 8} 0 Z` }));
+  const titleText = svgNode("text", { x: width / 2, y: 18, "text-anchor": "middle", class: "tooltip-title" });
+  titleText.textContent = title;
+  const detailText = svgNode("text", { x: width / 2, y: 35, "text-anchor": "middle", class: "tooltip-detail" });
+  detailText.textContent = detail;
+  group.append(titleText, detailText);
+  svg.append(group);
 }
 
 function openRouteDetail(which, opener) {
@@ -608,17 +648,17 @@ $("#route-detail-dialog").addEventListener("click", event => {
   const stop = event.target.closest?.("[data-stop-id]");
   if (stop) {
     const stopData = stopById(stop.dataset.stopId);
-    const assigned = visitForStop(stop.dataset.stopId);
+    const plan = state.detailMap === "old" ? state.previous : state.plan;
+    const assigned = visitForStop(stop.dataset.stopId, plan);
     const courier = assigned ? courierById(assigned.courierId) : null;
-    const rules = stopData && matchingConstraints(stopData, assigned?.courierId).map(constraintSummary);
+    const rules = state.detailMap === "new" && stopData ? matchingConstraints(stopData, assigned?.courierId).map(constraintSummary) : [];
     const details = [
       stopLabel(stop.dataset.stopId),
-      courier?.name || "Atanmadı",
-      assigned ? `Varış ${formatClock(assigned.visit.arrival_min)}` : "Planlanmadı",
+      `${courier?.name || "Atanmadı"}${assigned ? ` · ${formatClock(assigned.visit.arrival_min)}` : ""}`,
       ...(rules || []),
     ];
-    $("#detail-stop-info").textContent = details.join(" · ");
-    stop.classList.add("detail-selected-stop");
+    $("#detail-stop-info").textContent = details.join(". ");
+    showStopTooltip(stop, details[0], details[1]);
   }
 });
 $("#route-detail-dialog").addEventListener("close", () => state.detailOpener?.focus());

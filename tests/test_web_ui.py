@@ -64,3 +64,18 @@ def test_map_labels_match_courier_colors_and_current_plan_state():
     assert "app.js?v=" in html
     assert html.count('id="reset-plan"') == 1
     assert "Başa dön" not in html
+
+
+def test_stop_details_appear_at_selected_pin_and_follow_selected_plan():
+    script = (WEB / "app.js").read_text(encoding="utf-8")
+
+    assert "showStopTooltip" in script
+    assert "visitForStop(stop.dataset.stopId, plan)" in script
+    assert "state.detailMap === \"old\"" in script
+
+
+def test_unavailable_courier_and_transferred_stops_are_explained():
+    script = (WEB / "app.js").read_text(encoding="utf-8")
+
+    assert "Devre dışı" in script
+    assert "durak aktarıldı" in script

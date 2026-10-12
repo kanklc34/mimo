@@ -254,6 +254,12 @@ textarea::placeholder { color: var(--muted); opacity: 1; }
 .detail-map-hint { margin: 0; padding: 9px 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
 .detail-stop-info { min-height: 42px; padding: 10px 12px; border-top: 1px solid var(--line); background: var(--soft); color: var(--ink); font-size: 14px; font-weight: 700; }
 .detail-selected-stop { stroke: var(--ink) !important; stroke-width: 3.5 !important; }
+.map-stop-tooltip { pointer-events: none; filter: drop-shadow(0 3px 7px #14221d35); }
+.map-stop-tooltip rect { fill: var(--ink); stroke: white; stroke-width: 1; }
+.map-stop-tooltip path { fill: var(--ink); stroke: white; stroke-width: 1; stroke-linejoin: round; }
+.map-stop-tooltip .tooltip-title { fill: white; font: 700 11px "Segoe UI", Arial, sans-serif; }
+.map-stop-tooltip .tooltip-detail { fill: #d9e9e0; font: 500 10px "Segoe UI", Arial, sans-serif; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .detail-sidebar { overflow: auto; padding: 14px; border: 1px solid var(--line); background: var(--surface); }
 .detail-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 18px; }
 .detail-stat { min-height: 64px; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 8px 10px; background: var(--canvas); }
@@ -261,6 +267,9 @@ textarea::placeholder { color: var(--muted); opacity: 1; }
 .detail-stat strong { font-size: 17px; }
 .detail-sidebar h3 { margin: 0 0 7px; font-size: 16px; }
 .detail-route { padding: 9px 0; border-top: 1px solid var(--line); }
+.detail-route.courier-unavailable { margin: 0 -7px; padding: 9px 7px; border-radius: 8px; background: #fff8eb; }
+.courier-unavailable-badge { display: inline-block; margin: 5px 0 0 17px; padding: 3px 7px; border-radius: 999px; background: #f5e7c9; color: #80520a; font-size: 11px; font-weight: 700; }
+.courier-transfer { display: block; margin: 4px 0 0 17px; color: var(--accent); font-size: 12px; font-weight: 700; }
 .detail-route-head { display: flex; align-items: center; gap: 7px; font-size: 14px; }
 .detail-route-head i { width: 10px; height: 10px; border-radius: 50%; background: var(--courier-color); }
 .detail-route-head span { margin-left: auto; color: var(--muted); font-size: 12px; }
