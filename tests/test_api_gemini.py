@@ -45,6 +45,18 @@ def test_root_runtime_dependencies_include_the_gemini_sdk():
     assert any(dependency.lower().startswith("google-genai") for dependency in dependencies)
 
 
+def test_vercel_root_requirements_install_all_runtime_dependencies():
+    requirements = Path(__file__).resolve().parents[1] / "requirements.txt"
+    assert requirements.exists()
+    installed = {
+        line.strip().lower().split("=", 1)[0].split(">", 1)[0]
+        for line in requirements.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    }
+
+    assert {"fastapi", "pydantic", "uvicorn", "ortools", "google-genai"} <= installed
+
+
 def test_relative_minutes_are_preserved_during_time_normalization():
     raw = {"constraints": {"constraints": [
         {"type": "tag_deadline", "tag": "soğuk_zincir", "within_minutes_from_start": 120},
