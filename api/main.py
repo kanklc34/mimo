@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from threading import Lock
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from api.gemini import GeminiTranslator
 from api.planner import OrtoolsPlanner, Planner
@@ -66,10 +67,27 @@ def interpret(request: InterpretRequest) -> dict[str, Any]:
         _log("yorumlandı", request.text)
         _log("onay bekleniyor", result["understood_text"])
         return result
-    except Exception:
+    except ValidationError:
         message = "Talimatı anlayamadım. Lütfen kurye, etiket veya süreyi kontrol edip yeniden yazın."
-        _log("yorumlandı", "anlayamadım")
-        return {"constraints": {"constraints": []}, "understood_text": "", "ok": False, "message": message}
+        _log("anlaşılamadı", "Talimat kısıt şemasına uymadı")
+        return {
+            "constraints": {"constraints": []},
+            "understood_text": "",
+            "ok": False,
+            "error_code": "not_understood",
+            "message": message,
+        }
+    except Exception:
+        logging.exception("Gemini /interpret servis hatası")
+        message = "Gemini servis hatası oluştu. Lütfen biraz sonra yeniden deneyin."
+        _log("servis hatası", "Gemini /interpret başarısız")
+        return {
+            "constraints": {"constraints": []},
+            "understood_text": "",
+            "ok": False,
+            "error_code": "service_error",
+            "message": message,
+        }
 
 
 @app.post("/plan")

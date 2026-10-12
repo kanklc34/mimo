@@ -1,20 +1,20 @@
 from __future__ import annotations
 
 import argparse
-import atexit
 import html
 import json
 import os
 import re
 import sys
 import time
-import tempfile
 from collections import Counter
 from pathlib import Path
 from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 DEFAULT_DATASET = ROOT / "tests" / "data" / "gemini_eval.json"
 DEFAULT_CACHE = ROOT / "cache" / "gemini_eval"
 DEFAULT_REPORT = ROOT / "docs" / "olcum-gemini.md"
@@ -28,11 +28,15 @@ class RequestRecorder:
         self.attempts = 0
         self.raw_response: str | None = None
         self.response_received = False
+        self.request_body: str | None = None
+        self.last_exception: Exception | None = None
 
     def reset(self) -> None:
         self.attempts = 0
         self.raw_response = None
         self.response_received = False
+        self.request_body = None
+        self.last_exception = None
 
 
 def _is_rate_limit(error: Exception) -> bool:
@@ -57,6 +61,8 @@ def _install_request_recorder(recorder: RequestRecorder) -> None:
             self._models = models
 
         def generate_content(self, **kwargs):
+            contents = kwargs.get("contents")
+            recorder.request_body = contents if isinstance(contents, str) else None
             for retry_index in range(recorder.max_retries + 1):
                 recorder.attempts += 1
                 try:
@@ -65,6 +71,7 @@ def _install_request_recorder(recorder: RequestRecorder) -> None:
                     recorder.response_received = True
                     return response
                 except Exception as error:
+                    recorder.last_exception = error
                     if not _is_rate_limit(error) or retry_index >= recorder.max_retries:
                         raise
                     time.sleep(min(30.0, recorder.retry_wait_s * (2**retry_index)))
@@ -72,8 +79,8 @@ def _install_request_recorder(recorder: RequestRecorder) -> None:
 
     class RecordingClient:
         def __init__(self, *args, **kwargs):
-            delegate = original_client(*args, **kwargs)
-            self.models = RecordingModels(delegate.models)
+            self._delegate = original_client(*args, **kwargs)
+            self.models = RecordingModels(self._delegate.models)
 
     genai.Client = RecordingClient
 
@@ -82,21 +89,43 @@ def _load_gemini_config() -> tuple[dict[str, str], str]:
     from api.gemini import GeminiTranslator
 
     config = GeminiTranslator._dotenv()
-    api_key = os.environ.get("GEMINI_API_KEY") or config.get("GEMINI_API_KEY")
-    model = os.environ.get("GEMINI_MODEL") or config.get("GEMINI_MODEL")
+    api_key = config.get("GEMINI_API_KEY")
+    model = config.get("GEMINI_MODEL")
     if not api_key:
-        raise SystemExit("Hata: GEMINI_API_KEY bulunamadı. Ortam değişkeninde veya proje kökündeki .env dosyasında tanımlayın.")
+        raise SystemExit("Hata: GEMINI_API_KEY api/gemini.py ile aynı .env yükleme yolunda bulunamadı.")
     if not model:
-        raise SystemExit("Hata: GEMINI_MODEL bulunamadı. Ortam değişkeninde veya proje kökündeki .env dosyasında tanımlayın.")
+        raise SystemExit("Hata: GEMINI_MODEL api/gemini.py ile aynı .env yükleme yolunda bulunamadı.")
 
-    config["GEMINI_API_KEY"] = api_key
-    config["GEMINI_MODEL"] = model
-    config["GEMINI_DEMO_MODE"] = "0"
-    # GeminiTranslator normally reads credentials from .env. Merge process
-    # environment values in memory so the evaluator also supports env-only setup.
-    GeminiTranslator._dotenv = staticmethod(lambda: dict(config))
-    os.environ["GEMINI_DEMO_MODE"] = "0"
     return config, model
+
+
+def _safe_exception_chain(
+    error: BaseException,
+    *,
+    api_key: str | None,
+    request_body: str | None,
+    sentence: str,
+) -> str:
+    """Format the exception chain while removing credentials and prompt data."""
+    messages: list[str] = []
+    seen: set[int] = set()
+    current: BaseException | None = error
+    depth = 0
+    while current is not None and id(current) not in seen and depth < 8:
+        seen.add(id(current))
+        message = str(current)
+        for sensitive in (api_key, request_body, sentence):
+            if sensitive:
+                message = message.replace(sensitive, "[REDACTED]")
+        message = re.sub(r"(?i)(AIza[0-9A-Za-z_-]{20,})", "[API KEY REDACTED]", message)
+        message = re.sub(r"(?i)(Bearer\s+)[^\s,;]+", r"\1[REDACTED]", message)
+        message = re.sub(r"(?i)([?&]key=)[^&\s]+", r"\1[REDACTED]", message)
+        message = re.sub(r"(?is)(contents\s*[=:]\s*).+?(?=(?:,\s*[A-Za-z_][\w]*\s*=)|$)",
+                         r"\1[REQUEST BODY REDACTED]", message)
+        messages.append(f"{type(current).__name__}: {message or '(mesaj yok)'}")
+        current = current.__cause__ or current.__context__
+        depth += 1
+    return "\n  neden: ".join(messages)
 
 
 def _subject(constraint: dict[str, Any]) -> tuple[str, Any] | None:
@@ -232,18 +261,17 @@ def _load_cases(path: Path) -> list[dict[str, Any]]:
 
 def evaluate(args: argparse.Namespace) -> dict[str, Any]:
     os.chdir(ROOT)
-    _, model = _load_gemini_config()
+    config, model = _load_gemini_config()
     cases = _load_cases(args.dataset)
     recorder = RequestRecorder(args.retry_wait, args.max_retries)
     _install_request_recorder(recorder)
 
-    from api.gemini import GeminiTranslator
+    # /interpret uses this module-level translator, including its configuration
+    # and cache behavior. Keep evaluation on that same call path.
+    from api.main import translator
     from generator import generate_scenario
 
     args.cache.mkdir(parents=True, exist_ok=True)
-    translator_cache = tempfile.TemporaryDirectory(prefix="translator-", dir=args.cache)
-    atexit.register(translator_cache.cleanup)
-    translator = GeminiTranslator(cache_dir=translator_cache.name)
     scenario = generate_scenario(seed=42)
     evaluations = []
     api_calls_this_run = 0
@@ -262,9 +290,14 @@ def evaluate(args: argparse.Namespace) -> dict[str, Any]:
                 error = None
             except Exception as exc:
                 translated = None
-                # Store only the exception class. SDK exception text may contain
-                # request metadata, and no credential belongs in the eval cache.
                 error = type(exc).__name__
+                safe_chain = _safe_exception_chain(
+                    exc,
+                    api_key=config.get("GEMINI_API_KEY"),
+                    request_body=recorder.request_body,
+                    sentence=case["text"],
+                )
+                print(f"Gemini hata zinciri ({case['id']}): {safe_chain}", file=sys.stderr)
             api_calls_this_run += recorder.attempts
             if recorder.attempts and args.request_delay > 0:
                 time.sleep(args.request_delay)

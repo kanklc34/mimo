@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+from threading import Lock
 from typing import Any
 
 from constraints import ConstraintSet
@@ -20,6 +21,8 @@ constraints boş bırak ve anlaşılmadığını belirt. Başka alan veya açık
 class GeminiTranslator:
     def __init__(self, cache_dir: str | Path = "cache"):
         self.cache_dir = Path(cache_dir)
+        self._client: Any | None = None
+        self._client_lock = Lock()
 
     @staticmethod
     def _dotenv() -> dict[str, str]:
@@ -65,7 +68,12 @@ class GeminiTranslator:
             "couriers": [{"id": c.id, "name": c.name} for c in scenario.couriers],
             "tags": sorted(scenario.tags),
         }
-        client = genai.Client(api_key=api_key)
+        # Keep the SDK client owned by this translator. The API's translator
+        # lives for the process lifetime, and eval reuses that same instance.
+        with self._client_lock:
+            if self._client is None:
+                self._client = genai.Client(api_key=api_key)
+            client = self._client
         response = client.models.generate_content(
             model=model,
             contents=json.dumps({"scenario": scenario_context, "text": sentence}, ensure_ascii=False),

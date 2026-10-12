@@ -83,3 +83,54 @@ def test_live_translation_uses_mocked_sdk_and_caches_response(monkeypatch):
         assert "120 dakika" in config.system_instruction
         assert len(list(Path(temp_dir).glob("*.json"))) == 1
 
+
+def test_live_translation_reuses_open_client_for_consecutive_calls(monkeypatch):
+    with TemporaryDirectory(dir=Path(__file__).parent) as temp_dir:
+        client_state = {"closed": False, "created": 0}
+        response_text = json.dumps({
+            "constraints": {"constraints": []},
+            "understood_text": "Kısıt bulunamadı.",
+        }, ensure_ascii=False)
+
+        class FakeModels:
+            def __init__(self, state):
+                self.state = state
+
+            def generate_content(self, **_kwargs):
+                if self.state["closed"]:
+                    raise RuntimeError("Cannot send a request, as the client has been closed.")
+                return SimpleNamespace(text=response_text)
+
+        class FakeClient:
+            def __init__(self, *, api_key):
+                self.api_key = api_key
+                client_state["created"] += 1
+                self.models = FakeModels(client_state)
+
+            def __del__(self):
+                client_state["closed"] = True
+
+        google_module = ModuleType("google")
+        genai_module = ModuleType("google.genai")
+        types_module = ModuleType("google.genai.types")
+        genai_module.Client = FakeClient
+        types_module.GenerateContentConfig = lambda **kwargs: SimpleNamespace(**kwargs)
+        google_module.genai = genai_module
+        monkeypatch.setitem(sys.modules, "google", google_module)
+        monkeypatch.setitem(sys.modules, "google.genai", genai_module)
+        monkeypatch.setitem(sys.modules, "google.genai.types", types_module)
+        monkeypatch.setattr(GeminiTranslator, "_dotenv", staticmethod(lambda: {
+            "GEMINI_API_KEY": "secret-test-key",
+            "GEMINI_MODEL": "gemini-test",
+        }))
+        monkeypatch.delenv("GEMINI_DEMO_MODE", raising=False)
+
+        translator = GeminiTranslator(cache_dir=temp_dir)
+        first = translator.interpret("ilk cümle", generate_scenario())
+        second = translator.interpret("ikinci cümle", generate_scenario())
+
+        assert first["understood_text"] == "Kısıt bulunamadı."
+        assert second["understood_text"] == "Kısıt bulunamadı."
+        assert client_state["created"] == 1
+        assert client_state["closed"] is False
+

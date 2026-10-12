@@ -48,6 +48,25 @@ def test_interpret_rejects_unknown_references(monkeypatch):
     assert "anlayamadım" in data["message"].lower()
 
 
+def test_interpret_reports_and_logs_service_errors_separately(monkeypatch, caplog):
+    def fail_with_closed_client(text, scenario):
+        raise RuntimeError("Cannot send a request, as the client has been closed.")
+
+    monkeypatch.setattr(main.translator, "interpret", fail_with_closed_client)
+
+    data = main.interpret(InterpretRequest(text="Kurye 1 için talimat"))
+
+    assert data["ok"] is False
+    assert data["error_code"] == "service_error"
+    assert "servis hatası" in data["message"].lower()
+    assert "anlayamadım" not in data["message"].lower()
+    assert any(
+        record.exc_info and "client has been closed" in str(record.exc_info[1])
+        for record in caplog.records
+    )
+    assert any(event["step"] == "servis hatası" for event in main.get_log()["events"])
+
+
 def test_plan_includes_validation_summary_diff_and_unserved(monkeypatch):
     monkeypatch.setattr(main.planner, "plan", lambda scenario, constraints, previous_plan=None: (naive_plan(scenario), {}))
     request = PlanRequest(constraints={"constraints": []})
