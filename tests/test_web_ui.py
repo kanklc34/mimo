@@ -115,3 +115,10 @@ def test_rule_picker_uses_designed_choice_cards():
     assert 'class="rule-picker"' in html
     assert 'data-rule-type="courier_unavailable_after"' in html
     assert 'id="add-constraint-type"' not in html
+
+
+def test_mimo_status_bubble_uses_coordinates_relative_to_its_marker():
+    script = (WEB / "app.js").read_text(encoding="utf-8")
+
+    assert 'rect.setAttribute("x", String(boxX - markerX))' in script
+    assert 'bubble.setAttribute("y", String(boxY + 14 - markerY))' in script

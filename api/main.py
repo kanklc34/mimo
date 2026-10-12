@@ -179,7 +179,7 @@ def _clock_at_shift(minute: int, shift_start: int) -> str:
 def _courier_change_reason(change: dict[str, Any], previous: Plan | None, current: Plan,
                           constraints: ConstraintSet, scenario: Scenario) -> str:
     if previous is None:
-        return "Yeniden dağıtımda taşındı"
+        return "Yeni planda başka bir kuryeye aktarıldı."
 
     stop = scenario.stop_by_id.get(change["stop_id"])
     old_courier_id = change["old_courier_id"]
@@ -189,7 +189,7 @@ def _courier_change_reason(change: dict[str, Any], previous: Plan | None, curren
     )
     old_courier = scenario.courier_by_id.get(old_courier_id)
     if stop is None or old_visit is None or old_courier is None:
-        return "Yeniden dağıtımda taşındı"
+        return "Yeni planda başka bir kuryeye aktarıldı."
 
     old_arrival = old_visit.arrival_min
     old_clock = _clock_at_shift(old_arrival, old_courier.shift_start)
@@ -216,7 +216,7 @@ def _courier_change_reason(change: dict[str, Any], previous: Plan | None, curren
                 and old_count > rule.n and new_count < old_count):
             return f"{old_courier.name} {old_count} duraktan {new_count}'e düştü."
 
-    return "Yeniden dağıtımda taşındı"
+    return "Yeni planda başka bir kuryeye aktarıldı."
 
 
 def _validation_checks(constraints: ConstraintSet) -> list[str]:

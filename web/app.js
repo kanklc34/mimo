@@ -174,10 +174,14 @@ function setBubble(text) {
   const markerX = pointMatch ? Number(pointMatch[1]) : 180;
   const markerY = pointMatch ? Number(pointMatch[2]) : 115;
   const rect = $("#mimo-marker .mimo-bubble");
+  const boxX = markerX < 132 ? 4 : markerX > 228 ? 104 : markerX - 126;
+  const boxY = markerY < 70 ? markerY + 32 : markerY - 58;
+  const textX = markerX < 132 ? boxX + 12 : markerX > 228 ? boxX + 240 : boxX + 126;
+  const textAnchor = markerX < 132 ? "start" : markerX > 228 ? "end" : "middle";
   if (bubble) {
     bubble.replaceChildren(...messageLines.map((message, index) => {
       const tspan = svgNode("tspan", {
-        x: markerX < 132 ? 4 : markerX > 228 ? 356 : markerX,
+        x: textX - markerX,
         dy: index ? 12 : 0,
         textLength: Math.min(232, Math.max(120, message.length * 4.6)),
         lengthAdjust: "spacingAndGlyphs",
@@ -185,15 +189,13 @@ function setBubble(text) {
       tspan.textContent = message;
       return tspan;
     }));
-    if (markerX < 132) { bubble.setAttribute("x", "4"); bubble.setAttribute("text-anchor", "start"); }
-    else if (markerX > 228) { bubble.setAttribute("x", "356"); bubble.setAttribute("text-anchor", "end"); }
-    else { bubble.setAttribute("x", String(markerX)); bubble.setAttribute("text-anchor", "middle"); }
-    bubble.setAttribute("y", markerY < 70 ? String(markerY + 46) : String(markerY - 44));
+    bubble.setAttribute("x", String(textX - markerX));
+    bubble.setAttribute("text-anchor", textAnchor);
+    bubble.setAttribute("y", String(boxY + 14 - markerY));
   }
   if (rect) {
-    const anchor = markerX < 132 ? 2 : markerX > 228 ? 106 : markerX - 126;
-    rect.setAttribute("x", String(anchor));
-    rect.setAttribute("y", markerY < 70 ? String(markerY + 32) : String(markerY - 58));
+    rect.setAttribute("x", String(boxX - markerX));
+    rect.setAttribute("y", String(boxY - markerY));
   }
   if (rect) rect.style.display = messageLines.length ? "" : "none";
 }
@@ -239,7 +241,7 @@ function pause(ms, tourId) {
 function changeMessage(change, unservedById) {
   const stop = stopById(change.stop_id);
   const stopName = stopLabel(stop?.id || change.stop_id);
-  if (change.type === "kurye_degisti") return change.reason || `${stopName}: yeniden dağıtımda taşındı`;
+  if (change.type === "kurye_degisti") return change.reason || `${stopName}: yeni planda başka bir kuryeye aktarıldı.`;
   if (change.type === "sira_degisti") return `${stopName}: sırası değişti`;
   if (change.type === "yeni_atlandi") return `${stopName}: atlandı: ${unservedById.get(change.stop_id) || ""}`;
   return "";
@@ -351,7 +353,7 @@ function renderChangeDetails(data) {
   const courierChange = change => {
     const oldIndex = Math.max(0, state.scenario.couriers.findIndex(courier => courier.id === change.old_courier_id));
     const newIndex = Math.max(0, state.scenario.couriers.findIndex(courier => courier.id === change.new_courier_id));
-    const reason = change.reason || "Yeniden dağıtımda taşındı";
+    const reason = change.reason || "Yeni planda başka bir kuryeye aktarıldı.";
     return `${escapeHtml(stopLabel(change.stop_id))} · <span class="change-courier"><i style="--courier-color:${courierColors[oldIndex % courierColors.length]}"></i>${escapeHtml(courierName(change.old_courier_id))}</span> → <span class="change-courier"><i style="--courier-color:${courierColors[newIndex % courierColors.length]}"></i>${escapeHtml(courierName(change.new_courier_id))}</span><small class="change-reason">${escapeHtml(reason)}</small>`;
   };
   for (const change of meaningful) {

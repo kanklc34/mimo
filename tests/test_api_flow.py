@@ -220,3 +220,17 @@ def test_courier_change_reason_uses_max_stops_constraint(monkeypatch):
     assert change["reason"] == (
         f"{scenario.courier_by_id[courier_id].name} {old_count} duraktan {old_count - 1}'e düştü."
     )
+
+
+def test_unexplained_courier_change_is_described_plainly(monkeypatch):
+    _, _, old_courier_id, _, _, change = _move_real_scenario_stop(
+        monkeypatch,
+        lambda scenario, previous, courier_id, visit, stop: {
+            "type": "courier_unavailable_after",
+            "courier_id": next(courier.id for courier in scenario.couriers if courier.id != courier_id),
+            "time_min": 1,
+        },
+    )
+
+    assert change["old_courier_id"] == old_courier_id
+    assert change["reason"] == "Yeni planda başka bir kuryeye aktarıldı."
