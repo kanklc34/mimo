@@ -1,0 +1,17 @@
+[project]
+name = "mimo-kurye"
+version = "0.1.0"
+description = "Mimo Kurye backend skeleton"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "pydantic",
+    "uvicorn",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
