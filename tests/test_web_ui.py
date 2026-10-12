@@ -79,3 +79,11 @@ def test_unavailable_courier_and_transferred_stops_are_explained():
 
     assert "Devre dışı" in script
     assert "durak aktarıldı" in script
+
+
+def test_initial_plan_uses_ready_state_instead_of_zero_change_report():
+    script = (WEB / "app.js").read_text(encoding="utf-8")
+
+    assert "Başlangıç planı hazır" in script
+    assert "henüz devir yapılmadı" in script
+    assert "state.hasComparison" in script

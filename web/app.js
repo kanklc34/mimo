@@ -277,12 +277,14 @@ async function runTour(data) {
 
 function renderResult(data, { tour = true } = {}) {
   state.hasComparison = Boolean(state.plan && data.diff?.has_previous);
+  const initialPlan = !tour && !state.hasComparison && data.summary.valid;
   state.previous = state.plan || (!tour && data.diff?.previous_distance_km == null ? data.plan : null);
   state.plan = data.plan;
   state.constraints = data.constraints || { constraints: [] };
   const changes = data.diff?.changes || [];
   state.changed = new Set(changes.filter(change => change.type !== "sadece_saat_kaydi").map(change => change.stop_id));
   state.timeOnly = new Set(changes.filter(change => change.type === "sadece_saat_kaydi").map(change => change.stop_id));
+  if (state.scenario) renderMapLegend(state.scenario.couriers);
   $("#old-distance").textContent = data.diff?.previous_distance_km == null ? "— km" : `${data.diff.previous_distance_km.toFixed(2)} km`;
   $("#new-distance").textContent = `${data.summary.distance_km.toFixed(2)} km`;
   $("#dashboard-stops").textContent = String(state.scenario?.stops.length || 0);
@@ -290,11 +292,14 @@ function renderResult(data, { tour = true } = {}) {
   $("#dashboard-distance").textContent = data.summary.distance_km.toFixed(1);
   const unavailableRule = (state.constraints.constraints || []).find(rule => rule.type === "courier_unavailable_after");
   const transferred = unavailableRule ? transferredStopCount(unavailableRule.courier_id) : 0;
-  $("#dashboard-status").textContent = data.summary.valid && unavailableRule
-    ? "Devir planlandı ve doğrulandı" : data.summary.valid ? "Plan doğrulandı" : "Kontrol gerekiyor";
+  $("#dashboard-status").textContent = initialPlan
+    ? "Başlangıç planı hazır"
+    : data.summary.valid && unavailableRule ? "Devir planlandı ve doğrulandı" : data.summary.valid ? "Plan doğrulandı" : "Kontrol gerekiyor";
   $("#dashboard-substatus").textContent = !data.summary.valid
     ? `${data.validation_evidence.violation_count} kural ihlali`
-    : unavailableRule
+    : initialPlan
+      ? `${state.scenario.stops.length} durak · ${state.scenario.couriers.length} kurye · devir bekleniyor`
+      : unavailableRule
       ? `${courierName(unavailableRule.courier_id)} · ${formatClock(unavailableRule.time_min)} sonrası devre dışı · ${transferred} durak aktarıldı`
       : `${data.diff?.meaningful_change_count || 0} durak yeniden atandı · ${data.validation_evidence.violation_count} ihlal`;
   drawMap($("#old-map"), state.previous, true);
@@ -303,8 +308,10 @@ function renderResult(data, { tour = true } = {}) {
   const strip = $("#result-strip");
   strip.classList.toggle("invalid", !data.summary.valid);
   $(".result-icon").textContent = data.summary.valid ? "✓" : "!";
-  $("#result-text").textContent = data.summary.valid
-    ? `Gerçekten değişen ${data.diff.meaningful_change_count} durak · saat kayması ${data.diff.time_only_count} · ${data.validation_evidence.violation_count} ihlal · ${data.unserved.length} atlanan durak`
+  $("#result-text").textContent = initialPlan
+    ? `Başlangıç planı hazır · ${state.scenario.stops.length} durak dağıtıldı · henüz devir yapılmadı`
+    : data.summary.valid
+      ? `Gerçekten değişen ${data.diff.meaningful_change_count} durak · saat kayması ${data.diff.time_only_count} · ${data.validation_evidence.violation_count} ihlal · ${data.unserved.length} atlanan durak`
     : `Doğrulama başarısız · ${data.validation_evidence.violation_count} ihlal`;
   renderValidationEvidence(data.validation_evidence);
   $("#validation-evidence").hidden = !tour;
@@ -548,7 +555,7 @@ function renderMapLegend(couriers) {
   const courierItems = couriers.map((courier, index) =>
     `<span><i class="legend-dot" style="background:${courierColors[index % courierColors.length]}" aria-hidden="true"></i>${escapeHtml(courier.name)}</span>`
   );
-  courierItems.push('<span><i class="legend-dot changed-outline" aria-hidden="true"></i>Yeniden atanan durak</span>');
+  if (state.hasComparison) courierItems.push('<span><i class="legend-dot changed-outline" aria-hidden="true"></i>Yeniden atanan durak</span>');
   courierItems.push('<span><i class="legend-dot muted" aria-hidden="true"></i>Depo</span>');
   $("#map-legend").innerHTML = courierItems.join("");
 }
@@ -683,13 +690,14 @@ $("#reset-plan").addEventListener("click", async () => {
     $("#dashboard-stops").textContent = String(state.scenario?.stops.length || 0);
     $("#dashboard-couriers").textContent = String(state.scenario?.couriers.length || 0);
     $("#dashboard-distance").textContent = baseline.distance_km.toFixed(1);
-    $("#dashboard-status").textContent = "Plan hazır";
-    $("#dashboard-substatus").textContent = "Değişiklik bekleniyor";
+    $("#dashboard-status").textContent = "Başlangıç planı hazır";
+    $("#dashboard-substatus").textContent = `${state.scenario.stops.length} durak · ${state.scenario.couriers.length} kurye · devir bekleniyor`;
+    renderMapLegend(state.scenario.couriers);
     drawMap($("#old-map"), baseline.plan, true);
     drawMap($("#new-map"), baseline.plan, false);
     renderOverviewMap("new");
     $("#result-strip").classList.remove("invalid");
-    $("#result-text").textContent = "Başa dönüldü · gerçekten değişen 0 durak · saat kayması 0 · 0 ihlal · 0 atlanan durak";
+    $("#result-text").textContent = `Başlangıç planı hazır · ${state.scenario.stops.length} durak dağıtıldı · henüz devir yapılmadı`;
     $("#validation-details").innerHTML = "";
     $("#validation-details").parentElement.hidden = true;
     $("#validation-evidence").innerHTML = "";
