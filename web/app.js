@@ -528,6 +528,12 @@ function showStopTooltip(stopCircle, title, detail) {
   svg.append(group);
 }
 
+function closeStopTooltipOnOutsideClick(event) {
+  if (event.target.closest?.(".stop-dot")) return;
+  document.querySelectorAll(".map-stop-tooltip").forEach(tooltip => tooltip.remove());
+  document.querySelectorAll(".detail-selected-stop").forEach(stop => stop.classList.remove("detail-selected-stop"));
+}
+
 function openRouteDetail(which, opener) {
   const dialog = $("#route-detail-dialog");
   state.detailOpener = opener;
@@ -619,6 +625,7 @@ $("#new-map").addEventListener("click", event => {
   const stop = event.target.closest?.("[data-stop-id]");
   if (stop) showStopDetails(stop.dataset.stopId, stop, "new");
 });
+document.addEventListener("click", closeStopTooltipOnOutsideClick);
 $("#old-map").addEventListener("click", event => {
   const stop = event.target.closest?.("[data-stop-id]");
   if (stop) showStopDetails(stop.dataset.stopId, stop, "old");

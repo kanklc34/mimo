@@ -94,3 +94,9 @@ def test_overview_stop_selection_anchors_label_to_the_selected_stop():
 
     assert "showStopDetails(stop.dataset.stopId, stop" in script
     assert "showStopTooltip(stopCircle" in script
+
+
+def test_stop_tooltip_closes_when_clicking_elsewhere():
+    script = (WEB / "app.js").read_text(encoding="utf-8")
+
+    assert 'document.addEventListener("click", closeStopTooltipOnOutsideClick)' in script
