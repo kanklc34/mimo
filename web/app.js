@@ -4,7 +4,7 @@ const state = {
   scenario: null, plan: null, previous: null, constraints: { constraints: [] },
   changed: new Set(), timeOnly: new Set(), coordinates: new Map(), depotPoint: null,
   mimoPosition: null, mimoState: null, assetFailed: new Set(), tourId: 0, moveId: 0,
-  playTimer: null,
+  playTimer: null, detailMap: "new", detailOpener: null,
 };
 const courierColors = ["#4b9a70", "#729ac0", "#d59b54", "#9c7eb4"];
 const captions = {
@@ -340,6 +340,7 @@ function renderChangeDetails(data) {
   const timeOnly = changes.filter(change => change.type === "sadece_saat_kaydi");
   const timeRows = timeOnly.map(change => `<li>${escapeHtml(stopLabel(change.stop_id))} · ${escapeHtml(formatClock(change.old_arrival_min))} → ${escapeHtml(formatClock(change.new_arrival_min))}</li>`).join("");
   details.innerHTML = rows.length ? `<ul>${rows.join("")}</ul>` : "";
+  details.parentElement.hidden = !rows.length;
   if (timeOnly.length) details.insertAdjacentHTML("beforeend", `<details class="time-only-details"><summary>+${timeOnly.length} saat kayması (göster)</summary><ul>${timeRows}</ul></details>`);
 }
 
@@ -389,6 +390,50 @@ function showStopDetails(stopId) {
   const details = [stopLabel(stop.id), courier?.name || "Atanmadı", assigned ? formatClock(assigned.visit.arrival_min) : "", ...constraints].filter(Boolean);
   setBubble(details.join(" · "));
   void walkTo(state.coordinates.get(stopId));
+}
+
+function renderRouteDetail(which = state.detailMap) {
+  state.detailMap = which;
+  const source = which === "old" ? $("#old-map") : $("#new-map");
+  const target = $("#detail-map");
+  if (!source || !target || !state.scenario) return;
+  target.setAttribute("viewBox", source.getAttribute("viewBox") || "0 0 360 230");
+  target.innerHTML = source.innerHTML;
+  $("#detail-stop-info").textContent = "Durak ayrıntısı için haritada bir nokta seçin.";
+  const isOld = which === "old";
+  const plan = isOld ? state.previous : state.plan;
+  const distance = isOld ? $("#old-distance").textContent : $("#new-distance").textContent;
+  $("#detail-title").textContent = isOld ? "Önceki plan" : "Yeni plan";
+  $("#detail-subtitle").textContent = isOld
+    ? "Devir öncesindeki rota dağılımı."
+    : "Güncellenen rota dağılımı. Duraklara tıklayarak ayrıntıyı görün.";
+  document.querySelectorAll("[data-detail-map]").forEach(button => {
+    const active = button.dataset.detailMap === which;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  const changedCount = state.changed.size;
+  const violationText = $("#result-text").textContent.match(/(\d+) ihlal/)?.[1] || "—";
+  $("#detail-stats").innerHTML = [
+    ["Toplam mesafe", distance],
+    ["Kurye", String(state.scenario.couriers.length)],
+    ["Durak", String(state.scenario.stops.length)],
+    ["Değişen durak", isOld ? "—" : String(changedCount)],
+    ["Doğrulama ihlali", isOld ? "—" : violationText],
+  ].map(([label, value]) => `<div class="detail-stat"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
+  const routes = plan?.routes || {};
+  $("#detail-routes").innerHTML = state.scenario.couriers.map((courier, index) => {
+    const visits = routes[courier.id] || [];
+    const stops = visits.map(visit => stopLabel(visit.stop_id)).join(" · ");
+    return `<section class="detail-route"><div class="detail-route-head"><i style="--courier-color:${courierColors[index % courierColors.length]}"></i><strong>${escapeHtml(courier.name)}</strong><span>${visits.length} durak</span></div><p>${escapeHtml(stops || "Atanmış durak yok")}</p></section>`;
+  }).join("");
+}
+
+function openRouteDetail(which, opener) {
+  const dialog = $("#route-detail-dialog");
+  state.detailOpener = opener;
+  renderRouteDetail(which);
+  if (!dialog.open) dialog.showModal();
 }
 
 function routePosition(courier, visits, minute) {
@@ -455,6 +500,34 @@ $("#old-map").addEventListener("click", event => {
   const stop = event.target.closest?.("[data-stop-id]");
   if (stop) showStopDetails(stop.dataset.stopId);
 });
+document.querySelectorAll("[data-route-map]").forEach(button => button.addEventListener("click", () => {
+  openRouteDetail(button.dataset.routeMap, button);
+}));
+[["#old-map", "old"], ["#new-map", "new"]].forEach(([selector, which]) => $(selector).addEventListener("click", event => {
+  if (event.target.closest?.("[data-stop-id]")) return;
+  openRouteDetail(which, $(`[data-route-map="${which}"]`));
+}));
+document.querySelectorAll("[data-detail-map]").forEach(button => button.addEventListener("click", () => renderRouteDetail(button.dataset.detailMap)));
+$("#close-route-detail").addEventListener("click", () => $("#route-detail-dialog").close());
+$("#route-detail-dialog").addEventListener("click", event => {
+  if (event.target === $("#route-detail-dialog")) $("#route-detail-dialog").close();
+  const stop = event.target.closest?.("[data-stop-id]");
+  if (stop) {
+    const stopData = stopById(stop.dataset.stopId);
+    const assigned = visitForStop(stop.dataset.stopId);
+    const courier = assigned ? courierById(assigned.courierId) : null;
+    const rules = stopData && matchingConstraints(stopData, assigned?.courierId).map(constraintSummary);
+    const details = [
+      stopLabel(stop.dataset.stopId),
+      courier?.name || "Atanmadı",
+      assigned ? `Varış ${formatClock(assigned.visit.arrival_min)}` : "Planlanmadı",
+      ...(rules || []),
+    ];
+    $("#detail-stop-info").textContent = details.join(" · ");
+    stop.classList.add("detail-selected-stop");
+  }
+});
+$("#route-detail-dialog").addEventListener("close", () => state.detailOpener?.focus());
 $("#time-slider").addEventListener("input", renderTimelineMarkers);
 $("#reset-plan").addEventListener("click", async () => {
   const button = $("#reset-plan");
@@ -477,6 +550,7 @@ $("#reset-plan").addEventListener("click", async () => {
     $("#result-strip").classList.remove("invalid");
     $("#result-text").textContent = "Başa dönüldü · gerçekten değişen 0 durak · saat kayması 0 · 0 ihlal · 0 atlanan durak";
     $("#validation-details").innerHTML = "";
+    $("#validation-details").parentElement.hidden = true;
     $("#validation-evidence").innerHTML = "";
     $("#instruction").value = "";
     $("#constraints").value = JSON.stringify(state.constraints, null, 2);
