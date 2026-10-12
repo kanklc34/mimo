@@ -39,7 +39,9 @@ def _reason(stop_id: str, scenario: Scenario, rules: ConstraintSet) -> str:
     return "Zaman penceresi, kapasite, vardiya veya tanımlı kısıtlar nedeniyle atanamadı."
 
 
-def _solve_ortools(scenario: Scenario, rules: ConstraintSet, time_limit_s: float) -> tuple[Plan, str]:
+def _solve_ortools(
+    scenario: Scenario, rules: ConstraintSet, time_limit_s: float, previous_plan: Plan | None = None
+) -> tuple[Plan, str]:
     from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 
     stops = scenario.stops
@@ -58,7 +60,36 @@ def _solve_ortools(scenario: Scenario, rules: ConstraintSet, time_limit_s: float
         return travel + (stop_at_node[origin_node].service_min if origin_node else 0)
 
     time_callback = routing.RegisterTransitCallback(arc_time)
-    routing.SetArcCostEvaluatorOfAllVehicles(time_callback)
+    old_courier_by_stop = {
+        visit.stop_id: courier_id
+        for courier_id, visits in (previous_plan.routes.items() if previous_plan else [])
+        for visit in visits
+    }
+    old_successor_by_courier = {}
+    if previous_plan is not None:
+        for courier_id, visits in previous_plan.routes.items():
+            sequence = [visit.stop_id for visit in visits]
+            for index, stop_id in enumerate(sequence):
+                old_successor_by_courier[(courier_id, stop_id)] = sequence[index + 1] if index + 1 < len(sequence) else None
+            if sequence:
+                old_successor_by_courier[(courier_id, None)] = sequence[0]
+    node_id_by_index = {index + 1: stop.id for index, stop in enumerate(stops)}
+    for vehicle, courier in enumerate(couriers):
+        def arc_cost(from_index: int, to_index: int, assigned_courier=courier.id) -> int:
+            origin_node = manager.IndexToNode(from_index)
+            destination_node = manager.IndexToNode(to_index)
+            stop = stop_at_node.get(destination_node)
+            stability_cost = 2 if stop and stop.id in old_courier_by_stop and old_courier_by_stop[stop.id] != assigned_courier else 0
+            if previous_plan is not None:
+                origin_stop_id = node_id_by_index.get(origin_node)
+                destination_stop_id = node_id_by_index.get(destination_node)
+                prior_successor = old_successor_by_courier.get((assigned_courier, origin_stop_id), "missing")
+                if prior_successor != "missing" and prior_successor != destination_stop_id:
+                    stability_cost += 4
+            return arc_time(from_index, to_index) + stability_cost
+
+        cost_callback = routing.RegisterTransitCallback(arc_cost)
+        routing.SetArcCostEvaluatorOfVehicle(cost_callback, vehicle)
     horizon = max((courier.shift_end for courier in couriers), default=0)
     routing.AddDimension(time_callback, max(horizon, 1), max(horizon, 1), False, "Time")
     time_dimension = routing.GetDimensionOrDie("Time")
@@ -114,7 +145,21 @@ def _solve_ortools(scenario: Scenario, rules: ConstraintSet, time_limit_s: float
     parameters.local_search_metaheuristic = routing_enums_pb2.LocalSearchMetaheuristic.GREEDY_DESCENT
     parameters.time_limit.FromMilliseconds(max(1, int(max(0.001, time_limit_s) * 1000)))
     parameters.log_search = False
-    solution = routing.SolveWithParameters(parameters)
+    solution = None
+    if previous_plan is not None:
+        node_by_stop = {stop.id: index + 1 for index, stop in enumerate(stops)}
+        old_routes = [
+            [node_by_stop[visit.stop_id] for visit in previous_plan.routes.get(courier.id, []) if visit.stop_id in node_by_stop]
+            for courier in couriers
+        ]
+        try:
+            hint = routing.ReadAssignmentFromRoutes(old_routes, True)
+            if hint is not None:
+                solution = routing.SolveFromAssignmentWithParameters(hint, parameters)
+        except Exception:
+            solution = None
+    if solution is None:
+        solution = routing.SolveWithParameters(parameters)
     if solution is None:
         raise RuntimeError("OR-Tools did not produce a feasible solution")
 
@@ -212,7 +257,9 @@ def _schedule_route(route: list[RouteVisit], courier, scenario: Scenario, rules:
     return result
 
 
-def solve(scenario: Scenario, constraints, time_limit_s: float = 10) -> SolveResult:
+def solve(
+    scenario: Scenario, constraints, time_limit_s: float = 10, previous_plan: Plan | None = None
+) -> SolveResult:
     """Solve the constrained VRP; always return a plan, using the local fallback on errors."""
     started = perf_counter()
     rules = ConstraintSet()
@@ -224,7 +271,7 @@ def solve(scenario: Scenario, constraints, time_limit_s: float = 10) -> SolveRes
             plan, status = Plan(routes={}, unserved_stops=[s.id for s in scenario.stops]), "fallback-no-couriers"
         else:
             try:
-                plan, status = _solve_ortools(scenario, rules, time_limit_s)
+                plan, status = _solve_ortools(scenario, rules, time_limit_s, previous_plan)
             except Exception:
                 plan, status = _fallback(scenario, rules)
         reasons = {stop_id: _reason(stop_id, scenario, rules) for stop_id in plan.unserved_stops}

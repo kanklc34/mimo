@@ -47,7 +47,7 @@ def test_interpret_rejects_unknown_references(monkeypatch):
 
 
 def test_plan_includes_validation_summary_diff_and_unserved(monkeypatch):
-    monkeypatch.setattr(main.planner, "plan", lambda scenario, constraints: (naive_plan(scenario), {}))
+    monkeypatch.setattr(main.planner, "plan", lambda scenario, constraints, previous_plan=None: (naive_plan(scenario), {}))
     request = PlanRequest(constraints={"constraints": []})
 
     first = main.create_plan(request)
@@ -57,12 +57,15 @@ def test_plan_includes_validation_summary_diff_and_unserved(monkeypatch):
     assert "summary" in first
     assert first["summary"]["valid"] is (len(first["violations"]) == 0)
     assert "changed_stops" in second["diff"]
+    assert "meaningful_change_count" in second["diff"]
+    assert "time_only_count" in second["diff"]
+    assert all("type" in item for item in second["diff"]["changes"])
     assert "unserved" in second
     assert any(event["step"] in {"hesaplandı", "doğrulandı"} for event in main.get_log()["events"])
 
 
 def test_invalid_plan_is_not_marked_valid(monkeypatch):
-    monkeypatch.setattr(main.planner, "plan", lambda scenario, constraints: (Plan(), {}))
+    monkeypatch.setattr(main.planner, "plan", lambda scenario, constraints, previous_plan=None: (Plan(), {}))
 
     data = main.create_plan(PlanRequest(constraints={"constraints": []}))
 

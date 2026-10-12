@@ -2,10 +2,10 @@ from scripts.demo_scenario import build_demo_result
 from validator import validate
 
 
-def test_demo_produces_at_least_five_changes_and_valid_plan():
+def test_demo_produces_five_to_ten_meaningful_changes_and_valid_plan():
     scenario, before, result, changes, constraints = build_demo_result()
-    # The requested tuning is conditional: adjust only if the change count is below five.
-    assert len(changes) >= 5
+    meaningful = [change for change in changes if change["type"] != "sadece_saat_kaydi"]
+    assert 5 <= len(meaningful) <= 10
     assert validate(result.plan, scenario, constraints) == []
     assert result.status
     assert before.plan

@@ -1,44 +1,44 @@
-# Mimo Kurye backend durum raporu
+# Mimo Kurye birleşik durum
 
-## Tamamlananlar
+## Uygulama kapsamı
 
-- FastAPI uygulama iskeleti ve `/health` endpoint'i.
-- Pydantic modelleri: `Courier`, `Stop`, `Depot`, `Plan` ve `Violation`.
-- `courier_unavailable_after`, `tag_deadline` ve `max_stops` için ayrıştırmalı JSON şeması. Senaryoda bulunmayan kurye ve etiket referansları reddedilir; plandaki bilinmeyen durak ve kurye kimlikleri doğrulayıcıda ihlal olur.
-- Sabit seed ile 50 duraklı, 4 kuryeli sentetik İstanbul senaryosu; durakların 4'ü `soğuk_zincir` etiketlidir.
-- Haversine mesafesi, 30 km/saat ortalama hız ve her seyahat ayağını yukarı yuvarlayarak tam dakika hesaplama.
-- Solver'dan bağımsız doğrulayıcı: ziyaret sayısı, kapasite, vardiya, depoya dönüş varış zamanı, zaman pencereleri, seyahat ve servis süresi, ayrıca üç kısıt tipi.
-- `courier_unavailable_after` yalnızca ziyaret/servis zamanına uygulanır (servis bitişi belirtilen dakikayı aşamaz); depoya dönüş ayağına uygulanmaz. Dönüş varışı ayrıca `shift_end` ile denetlenir.
-- Kullanılmayan duraklar `Plan.unserved_stops` içinde raporlanır; tek başına ihlal değildir.
-- Durakları sırayla kuryelere dağıtan naif baseline. Mesafeye her turun depodan çıkışı ve depoya dönüşü dahildir.
+- FastAPI uygulaması `GET /health`, `GET /scenario`, `POST /interpret`, `POST /plan` ve `GET /log` uçlarını sunar. Web istemcisi `web/` altındadır.
+- `Courier`, `Stop`, `Depot`, `Plan` ve `Violation` Pydantic modelleri; ayrıştırmalı kısıt şeması ve sabit seed'li sentetik İstanbul senaryosu mevcuttur.
+- `POST /plan`, varsayılan `OrtoolsPlanner` ile OR-Tools `solve()` fonksiyonunu çağırır. Atlanan durak nedenleri `SolveResult.unserved_reasons` alanından döner. Planlar validator ile bağımsız doğrulanır.
+- Gün içi yeniden planlamada önceki plan çözücüye başlangıç ataması olarak verilir; aynı kuryede kalma ve önceki rota bağlantılarını koruma için küçük maliyetler uygulanır. `solve(..., previous_plan=None)` varsayılan kullanımı korur.
+- Plan farkları durak bazında `kurye_degisti`, `sira_degisti`, `sadece_saat_kaydi` veya `yeni_atlandi` türünü içerir. Sıra değişikliği, aynı kuryede kalan durakların göreli rotası değiştiğinde raporlanır; sadece saat farkları ayrı sayılır ve arayüzde soluk gösterilir.
+- OR-Tools çalışma zamanı çözüm üretemezse uygulanabilirlik denetimli en yakın komşu ve 2-opt yedeği vardır. Durak atlama nedenleri açıklayıcı sınıflandırmadır; infeasibility kanıtı değildir.
+- Zamanlar vardiya başlangıcından itibaren tam dakika; mesafe Haversine, seyahat hızı sabit 30 km/saat ve her ayak dakika üstüne yuvarlanır.
+- Solver ve validator birbirini import etmez. Solver bağımsızdır; validator yalnızca modelleri ve kısıtları kullanır.
 
-## Test ve mutation sonuçları
+## Çalıştırma
 
-- Komut: `C:\Users\KAAN\miniconda3\envs\mimo\python.exe -m pytest -q`
-- Sonuç: **37 geçti**.
-- Mutation ölçümü: **23/23 işlendi, 0 yanlış alarm** (dönüş aşımı, vardiya içinde dönüş ve tam sınır vakaları dahil).
-- Seed 42 baseline: **275.68 km**, **0 ihlal**, **0 atlanan durak**.
+Proje kökünden API'yi başlat:
 
-## Public fonksiyon imzaları
-
-```python
-validate(
-    plan: Plan,
-    scenario: Scenario,
-    constraints: ConstraintSet | list | None = None,
-) -> list[Violation]
-
-summarize(violations: list[Violation], plan: Plan) -> dict
-
-generate_scenario(seed: int = 42) -> Scenario
-
-naive_plan(scenario: Scenario) -> Plan
+```powershell
+C:\Users\KAAN\miniconda3\envs\mimo\python.exe -m uvicorn api.main:app --reload
 ```
 
-Mesafe raporu için ayrıca `plan_distance_km(plan: Plan, scenario: Scenario) -> float` kullanılabilir.
+Demo ölçümünü üret:
 
-## Açık sorunlar
+```powershell
+C:\Users\KAAN\miniconda3\envs\mimo\python.exe scripts/demo_scenario.py
+```
 
-- Gerçek yol ağı ve trafik yok; Haversine düz çizgi ve sabit hız varsayımıdır.
-- OR-Tools rota çözücüsü henüz eklenmedi; `solver.naive_plan` yalnızca başlangıç baseline'ıdır.
-- FastAPI şu an yalnızca health endpoint'i sunuyor; planlama uçları ve Gemini entegrasyonu kapsam dışı.
+Testleri çalıştır:
+
+```powershell
+C:\Users\KAAN\miniconda3\envs\mimo\python.exe -m pytest -q
+```
+
+## Son doğrulama
+
+Yukarıdaki tam test komutu: **61 geçti**, OR-Tools SWIG kaynaklı 3 deprecation uyarısı.
+
+`seed=42` demo koşusu: Kurye 1 için 180. dakika sınırı, Kurye 1 için en fazla 24 durak, soğuk zincir için 120 dakika. **6 gerçek değişiklik**, **9 yalnızca saat kaydı değişikliği**, **0 atlanan durak**, **0 doğrulayıcı ihlali**. Gerçek konsol çıktısı [olcum-rota.md](olcum-rota.md) dosyasındadır.
+
+## Sınırlar
+
+- Rota hesabı gerçek yol ağı ve trafiği kullanmaz; kuş uçuşu mesafe ve sabit hız varsayımıdır.
+- Gemini entegrasyonu yapılandırılmış Türkçe talimat yorumlama içindir; gerçek servis anahtarı sunucu ortamında tutulmalıdır.
+- Sentetik tek seed ölçümü gerçek saha performansını temsil etmez.

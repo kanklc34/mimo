@@ -1,20 +1,19 @@
-# Rota karşılaştırması
+# Demo rota ölçümü
 
-Koşu komutu: `C:\Users\KAAN\miniconda3\envs\mimo\python.exe scripts/compare_routes.py`  
-Senaryo: `generate_scenario(seed=42)` (50 durak, 4 kurye). Mesafe kuş uçuşu Haversine; generator'ın 30 km/saat ve her seyahat ayağını yukarı yuvarlayan hesabı kullanılır. Çözücü zaman sınırı 10 saniyedir. Naif ve kümelenmiş plan süreleri plan üretim çağrısının ölçümüdür; OR-Tools süresi `SolveResult.solve_time_s` değeridir. Validator süresi ölçüme dahil değildir.
+Komut: `C:\Users\KAAN\miniconda3\envs\mimo\python.exe scripts/demo_scenario.py`
 
-| Kısıt | Plan | Mesafe (km) | Validator ihlali | Atlanan | Plan/çözüm süresi (s) |
-|---|---|---:|---:|---:|---:|
-| Kısıtsız | Naif | 275.68 | 0 | 0 | 0.0009 |
-| Kısıtsız | Kümelenmiş naif | 86.34 | 0 | 0 | 0.0016 |
-| Kısıtsız | OR-Tools | 63.89 | 0 | 0 | 0.3948 |
-| Kurye 1, 14:00 sonrası yok (başlangıçtan 360 dk) | Naif | 275.68 | 0 | 0 | 0.0002 |
-| Kurye 1, 14:00 sonrası yok (başlangıçtan 360 dk) | Kümelenmiş naif | 86.34 | 0 | 0 | 0.0015 |
-| Kurye 1, 14:00 sonrası yok (başlangıçtan 360 dk) | OR-Tools | 63.89 | 0 | 0 | 0.3505 |
-| Soğuk zincir ilk 120 dk içinde | Naif | 275.68 | 2 | 0 | 0.0001 |
-| Soğuk zincir ilk 120 dk içinde | Kümelenmiş naif | 86.34 | 0 | 0 | 0.0015 |
-| Soğuk zincir ilk 120 dk içinde | OR-Tools | 69.06 | 0 | 0 | 0.2557 |
+Senaryo `generate_scenario(seed=42)` ile üretildi (50 durak, 4 kurye). Önce kısıtsız OR-Tools planı oluşturuldu; ikinci çözüm bu planı başlangıç ataması olarak aldı. Kısıtlar: Kurye 1 servis bitişi en geç 180. dakika, Kurye 1 en fazla 24 durak, soğuk zincir en geç 120. dakika.
 
-Demo komutu: `C:\Users\KAAN\miniconda3\envs\mimo\python.exe scripts/demo_scenario.py`. Sabit `seed=42` senaryosunda başlangıç planı kısıtsız OR-Tools çözümüdür. Yeni kısıtlar: **Kurye 1** servis bitişi en geç 180. dakika, **Kurye 2** en fazla 8 durak, soğuk zincir en geç 120. dakika. Gerçek koşuda **49 durak değişti**, atlanan durak çıkmadı. Değişmeyen durak `stop-16` idi. 49 değişiklik beşin altında olmadığı için parametre ayarı tetiklenmedi.
+## Gerçek çalıştırma çıktısı
 
-Bu değerler tek sentetik seed ve tek çalıştırmanın çıktılarıdır; gerçek yol ağı/trafik ölçümü değildir. Kurye 1 için 360 dakika kısıtı seed 42'de ölçülen rotayı değiştirmedi. Kümelenmiş baseline coğrafi açıyı dört bölgeye ayırır; kapasite aşımında durağı sıradaki kuryeye taşır ve her kurye içinde en yakın komşu sırasını kurar.
+```text
+Yeni talimat: Kurye 1 180. dakikadan sonra yok; Kurye 1 en fazla 24 durak; soğuk zincir ilk 120 dakikada teslim.
+Gerçekten değişen durak: 6
+Yalnızca saat kaydı değişen durak: 9
+Gerçek değişiklik kimlikleri: stop-09, stop-19, stop-21, stop-25, stop-41, stop-43
+{"status": "ortools", "solve_time_s": 0.3259, "validator_violations": 0}
+```
+
+Değişim türü sayıları: 6 kurye değişikliği ve 9 yalnızca saat kaydı değişikliği. Atlanan durak olmadı; validator **0 ihlal** verdi. Çözücü süresi makineye ve çalıştırmaya göre değişebilir.
+
+Bu sonuç seed 42 sentetik senaryosuna aittir. Mesafe/süre hesabı kuş uçuşu Haversine ve sabit 30 km/saat varsayımıdır; gerçek yol ağı ve trafik ölçümü değildir.

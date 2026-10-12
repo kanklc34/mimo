@@ -88,3 +88,13 @@ def test_solver_is_deterministic_for_same_input():
     assert first.plan.model_dump() == second.plan.model_dump()
     assert first.unserved_reasons == second.unserved_reasons
     assert first.status == second.status
+
+
+def test_previous_plan_is_optional_and_can_be_used_as_stability_hint():
+    scenario = _small_scenario([_stop("one"), _stop("two", lon=28.979)])
+    previous = solve(scenario, []).plan
+
+    result = solve(scenario, [], previous_plan=previous)
+
+    assert result.plan.model_dump() == previous.model_dump()
+    assert validate(result.plan, scenario, []) == []

@@ -2,25 +2,21 @@
 
 ## Başlatma
 
-Proje kökünde sanal ortamı/bağımlılıkları etkinleştirdikten sonra:
+Proje kökünde API'yi başlat:
 
 ```powershell
-uvicorn api.main:app --reload
+C:\Users\KAAN\miniconda3\envs\mimo\python.exe -m uvicorn api.main:app --reload
 ```
 
-Uygulama `http://127.0.0.1:8000` adresinde açılır. Gemini entegrasyonu için `.env.example` dosyasını `.env` adıyla kopyalayıp `GEMINI_API_KEY` ve `GEMINI_MODEL` değerlerini girin. `google-genai` bağımlılığını `api/requirements.txt` üzerinden kurun. API anahtarı yalnızca sunucuda okunur.
-
-Kayıtlı çeviri demosu için `.env` içinde `GEMINI_DEMO_MODE=1` kullanılır. Cümle yanıtları `cache/` altına SHA-256 cümle anahtarıyla yazılır; demo modunda yeni Gemini çağrısı yapılmaz ve bulunmayan kayıt hata verir.
+Uygulama `http://127.0.0.1:8000` adresindedir. OR-Tools proje bağımlılıklarına eklenmiştir. Gemini yorumlaması için `.env.example` dosyasını `.env` olarak kopyalayıp `GEMINI_API_KEY` ve `GEMINI_MODEL` değerlerini girin; API anahtarı sunucuda okunur.
 
 ## Uygulanan kapsam
 
-- `GET /scenario`: seed 42 sentetik İstanbul senaryosu.
-- `POST /interpret`: Türkçe talimatı Gemini structured output ile kısıt JSON'una çevirir ve kurye/etiket referanslarını doğrular.
-- `POST /plan`: şimdilik `MockPlanner` üzerinden `naive_plan` çalıştırır; bağımsız doğrulama, rota özeti, önceki plana göre değişen duraklar ve atlanan durak nedenlerini döndürür.
-- `GET /log`: adımları UTC zaman damgasıyla sunar; arayüz Mimo görsel durumunu bu kayıttan türetir.
-- Framework kullanmayan web arayüzü: talimat, düzenlenebilir kısıt JSON'u ve yan yana SVG rotaları.
-
-Plan doğrulama ihlal içeriyorsa `summary.valid` false olur. Rota görselleştirmesi harita altlığı olmayan SVG'dir; yol ve trafik verisi içermez. `web/assets/` altında Mimo PNG'leri bulunmadığından arayüz emoji yedeğini kullanır.
+- `GET /scenario`, `POST /interpret`, `POST /plan` ve `GET /log` uçları.
+- `POST /plan` varsayılan `OrtoolsPlanner` ile kısıtlı çözücü çalıştırır ve `SolveResult` atlanan durak nedenlerini döndürür. Önceki plan yeniden planlama çözümüne aktarılır.
+- Plan bağımsız validator ile kontrol edilir; rota özeti, önceki plan farkları ve atlanan duraklar döner.
+- Diff türleri kurye, sıra, yalnızca saat kaydı ve yeni atlanan durak farklarını ayırır. Özet gerçek değişiklik sayısını öne çıkarır; yalnızca saat farkları soluk gösterilir.
+- Web istemcisi framework kullanmayan HTML/CSS/JavaScript ve SVG rota gösterimidir. Haversine harita altlığı olmayan düz çizgi tahminidir.
 
 ## Test
 
@@ -28,4 +24,4 @@ Plan doğrulama ihlal içeriyorsa `summary.valid` false olur. Rota görselleşti
 C:\Users\KAAN\miniconda3\envs\mimo\python.exe -m pytest tests/test_api.py tests/test_api_flow.py tests/test_api_gemini.py -q
 ```
 
-Gemini çağrıları testlerde sahte SDK ile taklit edilir; gerçek servis çağrısı yapılmaz.
+Tam test paketi son koşuda **61 geçti**, 3 OR-Tools SWIG deprecation uyarısı verdi.

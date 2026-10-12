@@ -44,7 +44,8 @@ function drawMap(svg, plan, old = false) {
     const p = point(stop), route = assigned.get(stop.id);
     const fill = route === undefined ? "#cbd4ce" : courierColors[route % courierColors.length];
     const changed = !old && state.changed.has(stop.id);
-    markup += `<circle class="stop-dot ${changed ? "changed-stop" : ""}" cx="${p.x}" cy="${p.y}" r="${changed ? 4.1 : 2.6}" fill="${fill}"><title>${stop.id}${changed ? " · değişti" : ""}</title></circle>`;
+    const timeOnly = !old && state.timeOnly?.has(stop.id);
+    markup += `<circle class="stop-dot ${changed ? "changed-stop" : timeOnly ? "time-only-stop" : ""}" cx="${p.x}" cy="${p.y}" r="${changed || timeOnly ? 4.1 : 2.6}" fill="${fill}"><title>${stop.id}${changed ? " · değişti" : timeOnly ? " · yalnızca saat kaydı" : ""}</title></circle>`;
   }
   const depotPoint = point(depot);
   markup += `<circle class="depot-dot" cx="${depotPoint.x}" cy="${depotPoint.y}" r="4.2"><title>Depo</title></circle>`;
@@ -54,7 +55,9 @@ function drawMap(svg, plan, old = false) {
 function renderResult(data) {
   state.previous = state.plan;
   state.plan = data.plan;
-  state.changed = new Set(data.diff.changed_stops || []);
+  const changes = data.diff.changes || [];
+  state.changed = new Set(changes.filter(change => change.type !== "sadece_saat_kaydi").map(change => change.stop_id));
+  state.timeOnly = new Set(changes.filter(change => change.type === "sadece_saat_kaydi").map(change => change.stop_id));
   $("#old-distance").textContent = data.diff.previous_distance_km == null ? "— km" : `${data.diff.previous_distance_km.toFixed(2)} km`;
   $("#new-distance").textContent = `${data.summary.distance_km.toFixed(2)} km`;
   drawMap($("#old-map"), state.previous, true);
@@ -64,11 +67,14 @@ function renderResult(data) {
   $(".result-icon").textContent = data.summary.valid ? "✓" : "!";
   const skipCount = data.unserved.length;
   $("#result-text").textContent = data.summary.valid
-    ? `Bağımsız doğrulama geçti · ${data.violations.length} ihlal · ${skipCount} atlanan durak`
+    ? `Gerçekten değişen ${data.diff.meaningful_change_count} durak · saat kayması ${data.diff.time_only_count} · ${data.violations.length} ihlal · ${skipCount} atlanan durak`
     : `Doğrulama başarısız · Plan geçerli değil olarak işaretlendi · ${data.violations.length} ihlal`;
   const details = $("#validation-details");
   const rows = [...data.violations.map(v => `İhlal: ${v.description}`), ...data.unserved.map(x => `Atlandı: ${x.stop_id} — ${x.reason}`)];
-  details.innerHTML = rows.length ? `<ul>${rows.map(text => `<li>${escapeHtml(text)}</li>`).join("")}</ul>` : "";
+  const validationHtml = rows.length ? `<ul>${rows.map(text => `<li>${escapeHtml(text)}</li>`).join("")}</ul>` : "";
+  const labels = { kurye_degisti: "Kurye değişti", sira_degisti: "Sıra değişti", sadece_saat_kaydi: "Yalnızca saat kaydı", yeni_atlandi: "Yeni atlandı" };
+  const changesHtml = changes.map(change => `<li class="${change.type === "sadece_saat_kaydi" ? "time-only-change" : "meaningful-change"}">${escapeHtml(change.stop_id)} · ${labels[change.type] || change.type}</li>`).join("");
+  details.innerHTML = validationHtml + (changesHtml ? `<ul class="change-list">${changesHtml}</ul>` : "");
 }
 
 function escapeHtml(text) { const div = document.createElement("div"); div.textContent = text; return div.innerHTML; }

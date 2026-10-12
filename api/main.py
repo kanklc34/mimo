@@ -9,16 +9,17 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict
 
 from api.gemini import GeminiTranslator
-from api.planner import MockPlanner, Planner
+from api.planner import OrtoolsPlanner, Planner
 from constraints import ConstraintSet
 from generator import generate_scenario
 from models import Plan, Scenario
+from solver.diff import diff_plans
 from solver import plan_distance_km
 from validator import summarize, validate
 
 app = FastAPI(title="Mimo Kurye")
 translator = GeminiTranslator()
-planner: Planner = MockPlanner()
+planner: Planner = OrtoolsPlanner()
 _events: list[dict[str, str]] = []
 _state_lock = Lock()
 _previous_plan: Plan | None = None
@@ -79,7 +80,7 @@ def create_plan(request: PlanRequest) -> dict[str, Any]:
         constraints = ConstraintSet.model_validate(request.constraints, context={"scenario": scenario})
     except ValueError as exc:
         raise HTTPException(status_code=422, detail="Kısıtlar geçersiz; kurye, etiket ve alanları kontrol edin.") from exc
-    plan, unserved_reasons = planner.plan(scenario, constraints)
+    plan, unserved_reasons = planner.plan(scenario, constraints, previous_plan=_previous_plan)
     _log("hesaplandı", f"{sum(len(route) for route in plan.routes.values())} durak planlandı")
     _log("doğrulanıyor", "Plan bağımsız kurallarla kontrol ediliyor")
     violations = validate(plan, scenario, constraints)
@@ -98,9 +99,14 @@ def create_plan(request: PlanRequest) -> dict[str, Any]:
     diff = {
         "has_previous": prior is not None,
         "changed_stops": changed_stops,
+        "changes": diff_plans(prior, plan) if prior else [],
+        "meaningful_change_count": 0,
+        "time_only_count": 0,
         "previous_distance_km": round(plan_distance_km(prior, scenario), 2) if prior else None,
         "distance_delta_km": round(current_distance - plan_distance_km(prior, scenario), 2) if prior else None,
     }
+    diff["meaningful_change_count"] = sum(change["type"] != "sadece_saat_kaydi" for change in diff["changes"])
+    diff["time_only_count"] = sum(change["type"] == "sadece_saat_kaydi" for change in diff["changes"])
     _previous_plan = plan
     return {
         "plan": plan.model_dump(mode="json"),
