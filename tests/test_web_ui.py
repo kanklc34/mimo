@@ -135,3 +135,16 @@ def test_courier_routes_use_clear_distinct_colors_and_changes_have_separate_mark
     assert "--changed: #b42318;" in styles
     assert ".changed-stop { stroke: var(--changed);" in styles
     assert ".legend-dot.changed-outline { background: var(--surface); border: 2px solid var(--changed);" in styles
+
+
+def test_readme_explains_demo_scope_setup_workflow_and_tests():
+    readme_path = WEB.parent / "README.md"
+    assert readme_path.exists()
+    readme = readme_path.read_text(encoding="utf-8")
+
+    assert "sentetik" in readme.lower()
+    assert "gerçek zamanlı konum" in readme.lower()
+    assert "api.main:app" in readme
+    assert "GEMINI_API_KEY" in readme
+    assert "**Talimat:**" in readme
+    assert "python -m pytest -q" in readme
