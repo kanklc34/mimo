@@ -122,3 +122,16 @@ def test_mimo_status_bubble_uses_coordinates_relative_to_its_marker():
 
     assert 'rect.setAttribute("x", String(boxX - markerX))' in script
     assert 'bubble.setAttribute("y", String(boxY + 14 - markerY))' in script
+
+
+def test_courier_routes_use_clear_distinct_colors_and_changes_have_separate_marker():
+    script = (WEB / "app.js").read_text(encoding="utf-8")
+    styles = (WEB / "styles.css").read_text(encoding="utf-8")
+
+    palette = ["#087e8b", "#3b6fb6", "#c66a00", "#7651a8"]
+    assert 'const courierColors = ["' + '", "'.join(palette) + '"]' in script
+    for index, color in enumerate(palette, start=1):
+        assert f"--courier-{index}: {color};" in styles
+    assert "--changed: #b42318;" in styles
+    assert ".changed-stop { stroke: var(--changed);" in styles
+    assert ".legend-dot.changed-outline { background: var(--surface); border: 2px solid var(--changed);" in styles

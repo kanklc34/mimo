@@ -21,6 +21,22 @@ def test_wall_clock_conversion_uses_0800_shift_start(clock, expected):
     assert gemini.clock_to_minutes_from_shift_start(clock, shift_start_min=0) == expected
 
 
+def test_process_environment_overrides_dotenv_gemini_configuration(monkeypatch):
+    with TemporaryDirectory(dir=Path(__file__).parent) as temp_dir:
+        (Path(temp_dir) / ".env").write_text(
+            "GEMINI_API_KEY=file-key\nGEMINI_MODEL=file-model\n", encoding="utf-8"
+        )
+        with monkeypatch.context() as patch:
+            patch.chdir(temp_dir)
+            patch.setenv("GEMINI_API_KEY", "host-key")
+            patch.setenv("GEMINI_MODEL", "host-model")
+
+            config = GeminiTranslator._dotenv()
+
+            assert config["GEMINI_API_KEY"] == "host-key"
+            assert config["GEMINI_MODEL"] == "host-model"
+
+
 def test_relative_minutes_are_preserved_during_time_normalization():
     raw = {"constraints": {"constraints": [
         {"type": "tag_deadline", "tag": "soğuk_zincir", "within_minutes_from_start": 120},

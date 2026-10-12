@@ -6,7 +6,7 @@ const state = {
   mimoPosition: null, mimoState: null, assetFailed: new Set(), tourId: 0, moveId: 0,
   playTimer: null, detailMap: "new", detailOpener: null, hasComparison: false,
 };
-const courierColors = ["#4b9a70", "#729ac0", "#d59b54", "#9c7eb4"];
+const courierColors = ["#087e8b", "#3b6fb6", "#c66a00", "#7651a8"];
 const captions = {
   dusunuyor: ["Mimo düşünüyor", "Talimatı yorumluyor"],
   hesapliyor: ["Mimo hesaplıyor", "Rotayı oluşturuyor"],

@@ -9,10 +9,11 @@
   --soft: #edf4ef;
   --accent: #147a55;
   --accent-hover: #105638;
-  --courier-1: #4b9a70;
-  --courier-2: #729ac0;
-  --courier-3: #d59b54;
-  --courier-4: #9c7eb4;
+  --courier-1: #087e8b;
+  --courier-2: #3b6fb6;
+  --courier-3: #c66a00;
+  --courier-4: #7651a8;
+  --changed: #b42318;
   --violation: #b42318;
 }
 
@@ -93,10 +94,10 @@ h1 { margin-bottom: 0; font-size: 28px; line-height: 1.2; letter-spacing: -.035e
 .map-open:hover, .map-open:focus-visible { border-color: var(--accent); background: var(--soft); }
 .map-open-main { margin-left: auto; border-radius: 9px; padding: 7px 11px; }
 .map-card svg { display: block; width: 100%; height: min(40vh, 480px); min-height: 260px; flex: 1 1 auto; background: #f3f5f3; cursor: zoom-in; }
-.route-line { fill: none; stroke: var(--courier-1); stroke-width: 1.5; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; opacity: .86; }
+.route-line { fill: none; stroke: var(--courier-1); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; opacity: .96; }
 .old-line { stroke-dasharray: 4 4; }
-.stop-dot { stroke: var(--surface); stroke-width: 1; cursor: pointer; }
-.changed-stop { stroke: var(--courier-3); stroke-width: 2.6; }
+.stop-dot { stroke: var(--surface); stroke-width: 1.4; cursor: pointer; }
+.changed-stop { stroke: var(--changed); stroke-width: 2.6; }
 .time-only-stop { stroke: #657069; stroke-width: 1.5; opacity: .55; }
 .depot-dot { fill: var(--ink); stroke: var(--surface); stroke-width: 2; }
 .courier-marker { pointer-events: none; transition: opacity .15s; }
@@ -145,7 +146,7 @@ h1 { margin-bottom: 0; font-size: 28px; line-height: 1.2; letter-spacing: -.035e
 .legend-dot.fresh { background: var(--courier-1); }
 .legend-dot.changed { background: var(--courier-3); }
 .legend-dot.muted { background: var(--ink); }
-.legend-dot.changed-outline { background: var(--surface); border: 2px solid var(--courier-3); }
+.legend-dot.changed-outline { background: var(--surface); border: 2px solid var(--changed); }
 .workflow-panel { min-width: 0; display: grid; grid-template-rows: minmax(0, .9fr) minmax(0, 1.1fr); align-content: stretch; gap: 0; padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: 0 6px 24px #193b2710; }
 .dashboard-side { min-width: 0; }
 .dashboard-card { position: sticky; top: 16px; padding: 20px; }
