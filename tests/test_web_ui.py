@@ -87,3 +87,10 @@ def test_initial_plan_uses_ready_state_instead_of_zero_change_report():
     assert "Başlangıç planı hazır" in script
     assert "henüz devir yapılmadı" in script
     assert "state.hasComparison" in script
+
+
+def test_overview_stop_selection_anchors_label_to_the_selected_stop():
+    script = (WEB / "app.js").read_text(encoding="utf-8")
+
+    assert "showStopDetails(stop.dataset.stopId, stop" in script
+    assert "showStopTooltip(stopCircle" in script

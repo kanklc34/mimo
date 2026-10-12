@@ -450,17 +450,16 @@ function minutesFromClock(value) {
   return result >= 0 ? result : null;
 }
 
-function showStopDetails(stopId) {
+function showStopDetails(stopId, stopCircle, which = "new") {
   state.tourId += 1;
   const stop = stopById(stopId);
-  if (!stop) return;
-  const assigned = visitForStop(stopId);
+  if (!stop || !stopCircle) return;
+  const plan = which === "old" ? state.previous : state.plan;
+  const assigned = visitForStop(stopId, plan);
   const courierId = assigned?.courierId;
   const courier = courierById(courierId);
-  const constraints = matchingConstraints(stop, courierId).map(constraintSummary);
-  const details = [stopLabel(stop.id), courier?.name || "Atanmadı", assigned ? formatClock(assigned.visit.arrival_min) : "", ...constraints].filter(Boolean);
-  setBubble(details.join(" · "));
-  void walkTo(state.coordinates.get(stopId));
+  const details = `${courier?.name || "Atanmadı"}${assigned ? ` · ${formatClock(assigned.visit.arrival_min)}` : " · planlanmadı"}`;
+  showStopTooltip(stopCircle, stopLabel(stop.id), details);
 }
 
 function renderRouteDetail(which = state.detailMap) {
@@ -618,11 +617,11 @@ async function refreshLog() {
 
 $("#new-map").addEventListener("click", event => {
   const stop = event.target.closest?.("[data-stop-id]");
-  if (stop) showStopDetails(stop.dataset.stopId);
+  if (stop) showStopDetails(stop.dataset.stopId, stop, "new");
 });
 $("#old-map").addEventListener("click", event => {
   const stop = event.target.closest?.("[data-stop-id]");
-  if (stop) showStopDetails(stop.dataset.stopId);
+  if (stop) showStopDetails(stop.dataset.stopId, stop, "old");
 });
 document.querySelectorAll("[data-route-map]").forEach(button => button.addEventListener("click", () => {
   openRouteDetail(button.dataset.routeMap, button);
