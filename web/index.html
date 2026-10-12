@@ -1,41 +1,75 @@
 <!doctype html>
 <html lang="tr">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mimo Kurye · Rota masası</title><link rel="stylesheet" href="/styles.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f5f3">
+  <title>Mimo Kurye · Operasyon</title>
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <header class="topbar"><a class="brand" href="/" aria-label="Mimo Kurye ana sayfa"><span class="brand-mark">m</span><span>Mimo <b>Kurye</b></span></a><div class="top-meta"><span class="live-dot"></span> Canlı planlama <span class="divider">/</span> İstanbul · Vardiya 08:00–16:00</div><div class="badge">DEMO · SENTETİK VERİ</div></header>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Mimo Kurye ana sayfa">
+      <img class="brand-logo" src="/assets/mimo-kurye-logo-v1.png" alt="Mimo Kurye">
+    </a>
+    <div class="top-meta"><span class="live-dot" aria-hidden="true"></span><span>Operasyon açık</span><span class="divider" aria-hidden="true"></span><span>İstanbul</span></div>
+    <div class="badge">DEMO · SENTETİK VERİ</div>
+  </header>
+
   <main class="shell">
-    <div class="page-heading"><div><p class="eyebrow">OPERASYON MERKEZİ <span>·</span> 12 EKİM 2026</p><h1>Günün rotası</h1><p class="subtitle">Talimatını yaz, Mimo anlasın. Son kararı sen ver.</p></div><div class="shift-pill"><span class="shift-icon">◷</span><div><small>VARDİYA</small><strong>08:00 — 16:00</strong></div></div></div>
-    <section class="workspace">
-      <article class="panel instruction-panel">
-        <div class="panel-head"><span class="step-num">01</span><div><h2>Talimatını yaz</h2><p>Gün içindeki değişikliği anlat.</p></div></div>
-        <label class="field-label" for="instruction">DOĞAL DİLDE TALİMAT</label>
-        <textarea id="instruction" placeholder="Örn. Soğuk zincir paketlerini ilk iki saatte teslim et. Kurye 1 en fazla 8 durak alsın."></textarea>
-        <div class="prompt-hint"><span>✦</span> Kurye ve zaman kısıtlarını Türkçe yazabilirsin.</div>
-        <button class="button primary" id="interpret"><span>Talimatı yorumla</span><span aria-hidden="true">↗</span></button>
-        <p class="error-text" id="interpret-error" role="status"></p>
-        <div class="privacy-note"><span class="lock-icon">▣</span><span>Talimatlar sunucuda işlenir. API anahtarı tarayıcıya gönderilmez.</span></div>
-      </article>
-      <article class="panel constraints-panel">
-        <div class="panel-head"><span class="step-num">02</span><div><h2>Mimo böyle anladı</h2><p>Onaylamadan önce kontrol et veya düzenle.</p></div><span id="interpret-status" class="status-chip idle">BEKLİYOR</span></div>
-        <div class="understood" id="understood"><span class="sparkle">✦</span><span>Talimatını yazınca anlaşılan kısıtlar burada görünecek.</span></div>
-        <label class="field-label" for="constraints">KISITLAR · JSON</label>
-        <textarea class="json-editor" id="constraints" spellcheck="false">{"constraints": []}</textarea>
-        <div class="edit-hint">İstersen kısıt JSON’unu doğrudan düzenleyebilirsin.</div>
-        <div class="button-row"><button class="button secondary" id="correct">Düzelt</button><button class="button approve" id="approve" disabled>Onayla ve planla <span>→</span></button></div>
-        <p class="error-text" id="plan-error" role="status"></p>
-      </article>
+    <div class="page-heading">
+      <div>
+        <p class="eyebrow">OPERASYON MERKEZİ <span>·</span> 12 EKİM 2026</p>
+        <h1>Günlük rota planı</h1>
+      </div>
+      <div class="shift-pill"><div><small>VARDİYA</small><strong>08:00 — 16:00</strong></div></div>
+    </div>
+
+    <section class="workspace" aria-label="Rota planlama çalışma alanı">
       <article class="panel route-panel">
-        <div class="panel-head route-head"><div class="step-num">03</div><div class="route-title"><h2>Rota karşılaştırması</h2><p>Eski ve yeni dağılım · Haversine, düz çizgi tahmini</p></div><div class="avatar-wrap"><div class="mimo-avatar" id="mimo-avatar">🐒</div><div><strong id="mimo-caption">Mimo hazır</strong><small id="mimo-log">Talimatını bekliyor</small></div></div></div>
-        <div class="route-compare"><div class="map-card"><div class="map-label"><span class="legend-dot old"></span>ÖNCEKİ PLAN <b id="old-distance">— km</b></div><svg id="old-map" viewBox="0 0 360 230" role="img" aria-label="Önceki rota haritası"></svg></div><div class="map-card"><div class="map-label"><span class="legend-dot fresh"></span>YENİ PLAN <b id="new-distance">— km</b></div><svg id="new-map" viewBox="0 0 360 230" role="img" aria-label="Yeni rota haritası"></svg></div></div>
-        <div class="result-strip" id="result-strip"><span class="result-icon">✓</span><span id="result-text">Plan oluşturulduğunda doğrulama ve gerçek değişiklik sayısı burada görünür.</span></div>
+        <div class="panel-head route-head">
+          <div class="step-num">03</div>
+          <div class="route-title"><h2>Rota karşılaştırması</h2><p>Önceki ve yeni plan · kuş uçuşu tahmin</p></div>
+          <div class="avatar-wrap"><div class="mimo-avatar" id="mimo-avatar" aria-label="Mimo durumu"></div><div><strong id="mimo-caption">Mimo hazır</strong><small id="mimo-log">Talimat bekleniyor</small></div></div>
+        </div>
+        <div class="route-compare">
+          <div class="map-card"><div class="map-label"><span class="legend-dot old" aria-hidden="true"></span><span>ÖNCEKİ PLAN</span><b id="old-distance">— km</b></div><svg id="old-map" viewBox="0 0 360 230" role="img" aria-label="Önceki rota haritası"></svg></div>
+          <div class="map-card"><div class="map-label"><span class="legend-dot fresh" aria-hidden="true"></span><span>YENİ PLAN</span><b id="new-distance">— km</b></div><svg id="new-map" viewBox="0 0 360 230" role="img" aria-label="Yeni rota haritası"></svg></div>
+        </div>
+        <div class="result-strip" id="result-strip"><span class="result-icon" aria-hidden="true"></span><span id="result-text">Plan doğrulama sonucu bekleniyor.</span></div>
         <div class="validation-details" id="validation-details"></div>
-        <div class="timeline-control"><div class="timeline-head"><label for="time-slider">GÜN İÇİ ZAMAN <strong id="time-label">08:00</strong></label><button class="button secondary" id="play-time" type="button">Oynat</button></div><input id="time-slider" type="range" min="0" max="480" step="1" value="0" aria-label="08:00-16:00 zaman çizgisi"><div class="timeline-couriers" id="timeline-couriers"></div></div>
-        <div class="map-foot"><span><i class="legend-dot fresh"></i> Aktif rota</span><span><i class="legend-dot changed"></i> Değişen durak</span><span><i class="legend-dot muted"></i> Depo</span><span id="stop-count">50 durak · 4 kurye</span></div>
+        <div class="timeline-control">
+          <div class="timeline-head"><label for="time-slider">GÜN İÇİ ZAMAN <strong id="time-label">08:00</strong></label><button class="button secondary" id="play-time" type="button">Oynat</button></div>
+          <input id="time-slider" type="range" min="0" max="480" step="1" value="0" aria-label="08:00-16:00 zaman çizgisi">
+          <div class="timeline-couriers" id="timeline-couriers"></div>
+        </div>
+        <div class="map-foot"><span><i class="legend-dot fresh" aria-hidden="true"></i> Aktif rota</span><span><i class="legend-dot changed" aria-hidden="true"></i> Değişen durak</span><span><i class="legend-dot muted" aria-hidden="true"></i> Depo</span><span id="stop-count">Durak bilgisi yükleniyor</span></div>
       </article>
+
+      <aside class="workflow-panel" aria-label="Planlama adımları">
+        <article class="panel instruction-panel">
+          <div class="panel-head"><span class="step-num">01</span><div><h2>Talimat</h2><p>Değişikliği ve sınırları yazın.</p></div></div>
+          <label class="field-label" for="instruction">OPERASYON TALİMATI</label>
+          <textarea id="instruction" placeholder="Örn. Soğuk zincir paketlerini ilk iki saatte teslim et."></textarea>
+          <div class="prompt-hint">Kurye, durak ve zaman sınırlarını belirtin.</div>
+          <button class="button primary" id="interpret"><span>Talimatı yorumla</span></button>
+          <p class="error-text" id="interpret-error" role="status"></p>
+          <div class="privacy-note"><span>Talimatlar sunucuda işlenir. API anahtarı tarayıcıya gönderilmez.</span></div>
+        </article>
+
+        <article class="panel constraints-panel">
+          <div class="panel-head"><span class="step-num">02</span><div><h2>Onay ve kısıtlar</h2><p>Sonucu kontrol edin, gerekirse düzenleyin.</p></div><span id="interpret-status" class="status-chip idle">BEKLİYOR</span></div>
+          <div class="understood" id="understood">Anlaşılan kısıtlar burada görüntülenir.</div>
+          <label class="field-label" for="constraints">KISITLAR · JSON</label>
+          <textarea class="json-editor" id="constraints" spellcheck="false">{"constraints": []}</textarea>
+          <div class="edit-hint">JSON doğrudan düzenlenebilir.</div>
+          <div class="button-row"><button class="button secondary" id="correct">Düzelt</button><button class="button approve" id="approve" disabled>Onayla ve planla</button></div>
+          <p class="error-text" id="plan-error" role="status"></p>
+        </article>
+      </aside>
     </section>
-    <footer><span>MIMO KURYE <i>·</i> Türkçe talimattan doğrulanmış rotaya</span><span>Rota tahmini kuş uçuşudur; yol ve trafik içermez.</span></footer>
-  </main><script src="/app.js"></script>
-</body></html>
+    <footer><span>MIMO KURYE · ROTA OPERASYONU</span><span>Mesafeler yol ve trafik verisi içermez.</span></footer>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

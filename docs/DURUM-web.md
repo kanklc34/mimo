@@ -27,3 +27,10 @@ C:\Users\KAAN\miniconda3\envs\mimo\python.exe -m pytest tests/test_api.py tests/
 ```
 
 Tam test paketi son koşuda **61 geçti**, 3 OR-Tools SWIG deprecation uyarısı verdi.
+
+## Arayüz güncellemesi · 12 Ekim 2026
+
+- Harita karşılaştırması ana çalışma alanına, 01 talimat ve 02 onay/kısıt adımları sağ yan panele taşındı. Masaüstü yerleşimi 1366×768 ve 1920×1080 görünüm yüksekliklerine göre sıkılaştırıldı; rota ve doğrulama ayrıntıları kendi alanlarında taşma yönetimi kullanır.
+- Başlıkta mevcut Mimo Kurye PNG logosu kullanılır. Uzak font/CDN kaldırıldı; sistem fontları, okunabilir 16 px gövde metni, belirgin önceki/yeni kilometre değerleri ve doğrulama/ihlal renkleri uygulandı.
+- HTML işaretlemesi ve CSS güncellendi. `web/app.js`, API ve mevcut JS ID/sınıf/data bağları değiştirilmedi.
+- Son kontrol: `node --check web/app.js` başarılı; `tests/test_api.py`, `tests/test_api_flow.py`, `tests/test_api_gemini.py` **11 geçti**; `git diff --check` temiz.
