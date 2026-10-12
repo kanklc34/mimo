@@ -1,1 +1,1 @@
-"""Reserved for the future FastAPI application."""
+"""HTTP API for Mimo Kurye."""
